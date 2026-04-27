@@ -1,7 +1,6 @@
 import os
 import logging
 import httpx
-from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -49,22 +48,10 @@ async def gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         valor = float(args[0])
         descricao = " ".join(args[1:])
         
-        user_id = update.effective_user.id
-        username = update.effective_user.username or "desconhecido"
-        chat_id = update.effective_chat.id
-        timestamp = datetime.now().isoformat()
-        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 N8N_URL_FINANCAS,
-                json={
-                    "valor": valor,
-                    "descricao": descricao,
-                    "user_id": user_id,
-                    "username": username,
-                    "chat_id": chat_id,
-                    "timestamp": timestamp
-                }
+                json={"valor": valor, "descricao": descricao}
             )
         
         if response.status_code == 200:
