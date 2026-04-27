@@ -24,7 +24,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Comandos disponíveis:\n/start - Iniciar\n/help - Ajuda\n/ping - Testar integração\n/gasto [valor] [descrição] - Registrar gasto")
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ Bot funcionando!")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                N8N_URL_COMANDOS,
+                json={"comando": "ping"}
+            )
+        
+        if response.status_code == 200:
+            await update.message.reply_text("✅ Pong! Integração funcionando!")
+        else:
+            await update.message.reply_text(f"⚠️ Erro ao enviar. Status: {response.status_code}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro: {str(e)}\nURL: {N8N_URL_COMANDOS}")
 
 async def gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
