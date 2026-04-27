@@ -6,3 +6,4 @@ services:
     restart: unless-stopped
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
+      N8N_URL: ${N8N_URL}
