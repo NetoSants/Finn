@@ -1,0 +1,129 @@
+===============================================
+CONTEXTO: TeleTony - Integração Bot + n8n
+===============================================
+
+OBJETIVO: Bot Telegram envia webhooks via HTTP
+para o n8n na rede local Docker.
+
+-----------------------------------------------
+ARQUITETURA ATUAL (Servidor: 192.168.193.90)
+-----------------------------------------------
+
+Containeres:
+- telegrambot-bot-1   -> Rede: telegrambot_default
+- n8n                 -> Rede: bridge + telegrambot_default
+- portainer           -> Porta 9000
+
+-----------------------------------------------
+PASSOS JA REALIZADOS
+-----------------------------------------------
+
+1. Conectado n8n a rede do bot:
+   docker network connect telegrambot_default n8n
+
+2. Verificado conexao de rede:
+   docker network inspect telegrambot_default
+   (Resultado: telegrambot-bot-1 n8n)
+
+3. Container do bot AINDA NAO foi atualizado
+
+-----------------------------------------------
+PASSOS QUE FALTAM
+-----------------------------------------------
+
+1. NO PORTAINER (http://192.168.193.90:9000)
+
+   a) Acessar Stacks -> TeleTony -> Edit
+
+   b) Editar a variavel N8N_URL:
+
+      ANTES:
+      N8N_URL: "http://localhost:5678/webhook/teste"
+
+      DEPOIS:
+      N8N_URL: "http://n8n:5678/webhook/teste"
+
+   c) Deploy/Recreate o stack
+
+2. VERIFICAR DEPOIS DE RECRIAR
+
+   Executar no servidor:
+   docker exec telegrambot-bot-1 sh -c 'echo $N8N_URL'
+
+   Devera retornar: http://n8n:5678/webhook/teste
+
+3. NO N8N (http://192.168.193.90:5678)
+
+   a) Criar workflow com trigger "Webhook"
+   b) O webhook URL sera algo como:
+      http://n8n:5678/webhook/teste
+   c) Ativar o workflow (toggle no canto superior direito)
+
+4. TESTAR NO TELEGRAM
+
+   Enviar comando: /teste 10.50 cafe
+
+   Se tudo ok -> Bot responde "Enviado!"
+   Se erro    -> Bot responde com codigo do erro
+
+-----------------------------------------------
+CODIGO DO BOT (bot.py)
+-----------------------------------------------
+
+O bot usa:
+- httpx.AsyncClient para POST no N8N_URL
+- Formato JSON: {"valor": valor, "descricao": descricao}
+- O /teste e o comando que testa a integracao
+
+-----------------------------------------------
+ARQUIVO docker-compose.yml (atualizado)
+-----------------------------------------------
+
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      N8N_URL: "http://n8n:5678/webhook/teste"
+
+-----------------------------------------------
+COMANDOS UTEIS NO SERVIDOR
+-----------------------------------------------
+
+Ver containers:
+docker ps -a
+
+Ver redes:
+docker network ls
+
+Ver containers em uma rede:
+docker network inspect telegrambot_default --format '{{range .Containers}}{{.Name}} {{end}}'
+
+Ver logs do bot:
+docker logs telegrambot-bot-1 --tail 30
+
+Verificar variavel de ambiente no container:
+docker exec telegrambot-bot-1 sh -c 'echo $N8N_URL'
+
+Restartar container:
+docker restart telegrambot-bot-1
+
+-----------------------------------------------
+PROBLEMAS COMUNS
+-----------------------------------------------
+
+1. "localhost" no N8N_URL:
+   - Solucao: Usar "n8n" (nome do container)
+
+2. Containers em redes diferentes:
+   - Solucao: docker network connect telegrambot_default n8n
+
+3. Variavel de ambiente vazia:
+   - Solucao: Recriar/redeploy o container no Portainer
+
+4. n8n nao responde:
+   - Verificar se n8n esta rodando: docker ps
+   - Verificar logs: docker logs n8n --tail 30
