@@ -1,129 +1,200 @@
 ===============================================
-CONTEXTO: TeleTony - Integração Bot + n8n
+CONTEXTO: TeleTony - Bot Telegram + n8n
 ===============================================
 
-OBJETIVO: Bot Telegram envia webhooks via HTTP
-para o n8n na rede local Docker.
+PROJETO: Bot Telegram que envia webhooks HTTP para o n8n (Docker)
 
 -----------------------------------------------
-ARQUITETURA ATUAL (Servidor: 192.168.193.90)
+ARQUITETURA
 -----------------------------------------------
+
+Servidor: 192.168.193.90 (Docker)
 
 Containeres:
 - telegrambot-bot-1   -> Rede: telegrambot_default
-- n8n                 -> Rede: bridge + telegrambot_default
+- n8n                 -> Porta 5678, Rede: telegrambot_default
 - portainer           -> Porta 9000
 
------------------------------------------------
-PASSOS JA REALIZADOS
------------------------------------------------
-
-1. Conectado n8n a rede do bot:
-   docker network connect telegrambot_default n8n
-
-2. Verificado conexao de rede:
-   docker network inspect telegrambot_default
-   (Resultado: telegrambot-bot-1 n8n)
-
-3. Container do bot AINDA NAO foi atualizado
+Comunicação:
+- Bot → n8n: http://n8n:5678/webhook/[nome]
+- Containers na mesma rede Docker
 
 -----------------------------------------------
-PASSOS QUE FALTAM
+ARQUIVOS DO PROJETO
 -----------------------------------------------
 
-1. NO PORTAINER (http://192.168.193.90:9000)
-
-   a) Acessar Stacks -> TeleTony -> Edit
-
-   b) Editar a variavel N8N_URL:
-
-      ANTES:
-      N8N_URL: "http://localhost:5678/webhook/teste"
-
-      DEPOIS:
-      N8N_URL: "http://n8n:5678/webhook/teste"
-
-   c) Deploy/Recreate o stack
-
-2. VERIFICAR DEPOIS DE RECRIAR
-
-   Executar no servidor:
-   docker exec telegrambot-bot-1 sh -c 'echo $N8N_URL'
-
-   Devera retornar: http://n8n:5678/webhook/teste
-
-3. NO N8N (http://192.168.193.90:5678)
-
-   a) Criar workflow com trigger "Webhook"
-   b) O webhook URL sera algo como:
-      http://n8n:5678/webhook/teste
-   c) Ativar o workflow (toggle no canto superior direito)
-
-4. TESTAR NO TELEGRAM
-
-   Enviar comando: /teste 10.50 cafe
-
-   Se tudo ok -> Bot responde "Enviado!"
-   Se erro    -> Bot responde com codigo do erro
+bot.py               - Código principal do bot
+docker-compose.yml   - Configuração do container
+Dockerfile           - Imagem do container
+requirements.txt    - Dependências Python
 
 -----------------------------------------------
-CODIGO DO BOT (bot.py)
+COMANDOS DO BOT
 -----------------------------------------------
 
-O bot usa:
-- httpx.AsyncClient para POST no N8N_URL
-- Formato JSON: {"valor": valor, "descricao": descricao}
-- O /teste e o comando que testa a integracao
+/start               - Mensagem de boas-vindas
+/help                - Lista de comandos disponíveis
+/ping                - Testar integração (webhook comandos)
+/gasto [valor] [descrição] - Registrar gasto (webhook financas)
+
+Exemplo:
+/gasto 25.50 almoço
 
 -----------------------------------------------
-ARQUIVO docker-compose.yml (atualizado)
+VARIÁVEIS DE AMBIENTE
 -----------------------------------------------
 
-version: '3.8'
+No docker-compose.yml (hardcoded):
 
-services:
   bot:
     build: .
     restart: unless-stopped
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      N8N_URL: "http://n8n:5678/webhook/teste"
+      N8N_URL_FINANCAS: "http://n8n:5678/webhook/financas"
+      N8N_URL_COMANDOS: "http://n8n:5678/webhook/comandos"
+
+Importante: O BOT_TOKEN precisa ser definido no Portainer Stack.
+As URLs do n8n estão hardcoded e não precisam de variáveis.
 
 -----------------------------------------------
-COMANDOS UTEIS NO SERVIDOR
+WEBHOOKS N8N
+-----------------------------------------------
+
+Dois webhooks configurados:
+
+1.Webhook Financas:
+  URL: http://n8n:5678/webhook/financas
+  Uso: /gasto [valor] [descrição]
+  Body recebido: {"valor": 22, "descricao": "..."}
+
+2.Webhook Comandos:
+  URL: http://n8n:5678/webhook/comandos
+  Uso: /ping (teste)
+
+Importante: O workflow deve estar ATIVADO (toggle verde) para funcionar.
+
+-----------------------------------------------
+COMANDOS ÚTEIS (servidor)
 -----------------------------------------------
 
 Ver containers:
-docker ps -a
+  docker ps -a
 
 Ver redes:
-docker network ls
+  docker network ls
 
 Ver containers em uma rede:
-docker network inspect telegrambot_default --format '{{range .Containers}}{{.Name}} {{end}}'
+  docker network inspect telegrambot_default --format '{{range .Containers}}{{.Name}} {{end}}'
 
 Ver logs do bot:
-docker logs telegrambot-bot-1 --tail 30
-
-Verificar variavel de ambiente no container:
-docker exec telegrambot-bot-1 sh -c 'echo $N8N_URL'
+  docker logs telegrambot-bot-1 --tail 30
 
 Restartar container:
-docker restart telegrambot-bot-1
+  docker restart telegrambot-bot-1
+
+Acessar container:
+  docker exec -it telegrambot-bot-1 sh
+
+Ver variáveis de ambiente:
+  docker exec telegrambot-bot-1 sh -c 'echo $N8N_URL_FINANCAS'
+
+Testar koneksi dari container:
+  docker exec telegrambot-bot-1 sh -c 'wget -q -O- http://n8n:5678 --timeout=5'
+
+-----------------------------------------------
+PORTALER
+-----------------------------------------------
+
+Acessar: http://192.168.193.90:9000
+
+Stack: TeleTony
+  - Editar variáveis de ambiente
+  - Recreate/Redeploy para aplicar mudanças
+
+-----------------------------------------------
+N8N
+-----------------------------------------------
+
+Acessar: http://192.168.193.90:5678
+
+Criar workflow:
+1. Novo workflow
+2. Adicionar nó Webhook (definir path)
+3. Adicionar nós intermediários (Set, Function, etc)
+4. Adicionar nó de saída (Google Sheets, etc)
+5. Salvar e ATIVAR (toggle verde)
+
+Nodes úteis para transformar dados:
+- Set: Adicionar/modificar campos
+- Function: JavaScript customizado
+- Date & Time: Formatar data/hora
+- Switch/IF: Condicionais
+
+-----------------------------------------------
+FLUXO DE DADOS
+-----------------------------------------------
+
+Telegram → Bot → Webhook n8n → Workflow → Planilha
+
+Exemplo /gasto 25.50 almoço:
+1. Usuário envia /gasto 25.50 almoço
+2. Bot processa e envia POST para n8n:
+   {"valor": 25.50, "descricao": "almoço"}
+3. n8n recebe via Webhook
+4. Workflow processa (Set, Function, etc)
+5. Dados enviados para Google Sheets
 
 -----------------------------------------------
 PROBLEMAS COMUNS
 -----------------------------------------------
 
-1. "localhost" no N8N_URL:
-   - Solucao: Usar "n8n" (nome do container)
+1. Erro 404 no webhook:
+   - Workflow não está ativado
+   - Solução: Clicar no toggle verde no n8n
 
-2. Containers em redes diferentes:
-   - Solucao: docker network connect telegrambot_default n8n
+2. "UnsupportedProtocol" - URL sem http://:
+   - Variável de ambiente vazia
+   - Verificar se container foi redeployado
 
-3. Variavel de ambiente vazia:
-   - Solucao: Recriar/redeploy o container no Portainer
+3. Conexão recusada:
+   - Verificar se n8n está na mesma rede
+   - docker network connect telegrambot_default n8n
 
-4. n8n nao responde:
-   - Verificar se n8n esta rodando: docker ps
-   - Verificar logs: docker logs n8n --tail 30
+4. localhost no lugar de n8n:
+   - Containers não se comunicam por localhost
+   - Usar nome do container: n8n
+
+-----------------------------------------------
+ATUALIZAR BOT
+-----------------------------------------------
+
+1. No PC local:
+   - Editar bot.py
+   - git add . && git commit -m "mensagem"
+   - git push origin main
+
+2. No servidor (192.168.193.90):
+   - cd /caminho/para/teletony
+   - git pull
+   - docker build -t teletony:latest .
+   - docker stop telegrambot-bot-1
+   - docker rm telegrambot-bot-1
+   - docker run -d --name telegrambot-bot-1 --network telegrambot_default -e BOT_TOKEN=... teletony:latest
+
+Ou via Portainer:
+   - Stack -> TeleTony -> Edit -> Recreate
+
+-----------------------------------------------
+EXTENSÃO FUTURA
+-----------------------------------------------
+
+Ideias para adicionar:
+- /renda [valor] - Registrar receita
+- /saldo - Ver saldo atual
+- /extrato - Lista de transações
+- Categorias de gasto
+- Relatórios mensais
+- Notificações自动
+
+-----------------------------------------------
