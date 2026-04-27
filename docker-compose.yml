@@ -6,4 +6,5 @@ services:
     restart: unless-stopped
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      N8N_URL: "http://n8n:5678/webhook/teste"
+      N8N_URL_FINANCAS: ${N8N_URL_FINANCAS}
+      N8N_URL_COMANDOS: ${N8N_URL_COMANDOS}
