@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-N8N_URL = os.getenv("N8N_URL", "http://localhost:5678/webhook-test/teste")
+N8N_URL = os.getenv("N8N_URL", "http://192.168.1.105:5678/webhook-test/teste")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Olá! Sou o TeleTony. Como posso ajudar?")
