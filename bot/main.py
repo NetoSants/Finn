@@ -1,7 +1,6 @@
 import logging
-from telegram import Update, BotCommand
+from telegram import Update, BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.constants import BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
 
 from config import BOT_TOKEN, N8N_URL_FINANCAS, N8N_URL_COMANDOS
 from commands import start, help_command, ping, gasto, renda, saldo, extrato
