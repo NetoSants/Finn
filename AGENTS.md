@@ -69,3 +69,7 @@ docker exec telegrambot-bot-1 sh -c 'wget -q -O- http://n8n:5678 --timeout=5'
 
 - `planilha_financeira.xlsx` — criado por `criar_planilha.py`
 - `contexto_teletony.txt`, `contexto_financeiro.md`, `TeleTony.md` — documentação
+
+## Melhorias futuras
+
+- **Usar Token do Telegram direto no n8n**: Em vez de webhooks com IP local, o n8n pode receber atualizações diretamente via `getUpdates` ou webhook do Telegram, simplificando a arquitetura e evitando problemas de conectividade Docker
