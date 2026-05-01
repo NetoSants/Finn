@@ -21,14 +21,17 @@ async def gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         valor = float(args[0])
         descricao = " ".join(args[1:])
 
+        payload = {
+            "tipo": "gasto",
+            "valor": valor,
+            "descricao": descricao,
+            "timestamp": datetime.now().isoformat()
+        }
+        logger.info(f"Enviando payload para n8n: {payload}")
+
         sucesso, mensagem = await fazer_requisicao_n8n(
             N8N_URL_FINANCAS,
-            {
-                "tipo": "gasto",
-                "valor": valor,
-                "descricao": descricao,
-                "timestamp": datetime.now().isoformat()
-            }
+            payload
         )
 
         if sucesso:
