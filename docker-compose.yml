@@ -6,6 +6,10 @@ services:
     restart: unless-stopped
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      N8N_URL_FINANCAS: "http://n8n:5678/webhook/financas"
-      N8N_URL_COMANDOS: "http://n8n:5678/webhook/comandos"
+      # No Docker, N8N_HOST padrão é 'n8n' (config.py). Override se necessário.
+      N8N_HOST: "n8n"
+      N8N_PORT: "5678"
+      N8N_WEBHOOK_PATH: "webhook-test"
+      # URL de NLP (Ollama) - no Docker usa o host 'n8n'
+      N8N_URL_NLP: "http://n8n:5678/webhook-test/nlp"
       TZ: "America/Sao_Paulo"

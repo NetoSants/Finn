@@ -1,75 +1,58 @@
 # TeleTony
 
-Bot do Telegram para controle financeiro, integrado com workflows n8n e Google Sheets.
+Bot do Telegram para controle financeiro, processamento via n8n + Ollama.
 
-## Arquitetura
+## Arquitetura Simples
 
-- **Entrypoint real**: `bot/main.py` (confirmado no Dockerfile), não o `bot.py` na raiz
-- **Pacote**: `bot/` contém commands modulares (`commands/`) e utilitários (`utils/`)
-- **Execução**: Container Docker em `192.168.193.90`, rede `telegrambot_default`
-- **Integração**: Bot → webhooks n8n → Google Sheets
-- **Acesso n8n**: http://192.168.193.90:5678
-- **Acesso Portainer**: http://192.168.193.90:9000 (Stack: TeleTony)
+- **Entrypoint**: `bot/main.py`
+- **Fluxo**: Bot (Docker) → Webhook n8n → Ollama (IA) → Telegram API / Google Sheets
+- **Processamento**: Todas as mensagens em linguagem natural via webhook NLP (`/nlp`)
+- **Sem comandos locais**: n8n roteia intents (gasto, renda, saldo, etc)
 
-## Convenções críticas
+## Configuração
 
-- **DNS do container**: Use `http://n8n:5678` para webhooks, nunca `localhost` ou IP
-- **Workflows n8n devem estar ativados** (toggle verde) para receber chamadas de webhook
-- **Sem fluxo padrão de desenvolvimento Python**: sem venv, sem testes, sem linting/typechecking
-- **Atualizações**: `git push` → `git pull` no servidor → `docker build` ou recriar no Portainer
-- **`.env` contém BOT_TOKEN sensível** — nunca faça commit; está no gitignore
-
-## Convenção de idioma
-
-- **Todo conteúdo voltado ao usuário deve estar em Português Brasileiro (pt-BR)**
-- Respostas do bot, mensagens e documentação para usuários devem usar pt-BR
-- Comentários de código e documentação técnica interna podem permanecer em inglês
-
-## Dependências e bugs conhecidos
-
-- **`httpx` ausente no `requirements.txt`**: usado em `bot/utils/n8n_client.py` e necessário para requisições n8n
-- `requirements.txt` atual: `python-telegram-bot==21.6`, `python-dotenv==1.0.1`
-
-## Comandos do bot implementados
-
-| Comando | Descrição | Webhook |
-|---------|-----------|---------|
-| `/start` | Mensagem de boas-vindas | - |
-| `/help` | Lista comandos disponíveis | - |
-| `/ping` | Testar integração | `comandos` |
-| `/gasto [valor] [desc]` | Registrar gasto | `financas` |
-| `/renda [valor] [desc]` | Registrar renda | `financas` |
-| `/saldo` | Consultar saldo atual | `comandos` |
-| `/extrato` | Ver extrato de transações | `comandos` |
-
-## Variáveis de ambiente
-
+### Variáveis de ambiente (.env)
 ```
-BOT_TOKEN=<do Portainer ou .env>
-N8N_URL_FINANCAS=http://n8n:5678/webhook/financas
-N8N_URL_COMANDOS=http://n8n:5678/webhook/comandos
+BOT_TOKEN=<token_telegram>
+N8N_HOST=n8n                    # DNS do container Docker
+N8N_PORT=5678
+N8N_WEBHOOK_PATH=webhook-test   # padrão
+N8N_URL_NLP=http://n8n:5678/webhook-test/nlp  # NLP (lowercase!)
+ALLOWED_USER_IDS=1401845586      # Seu User ID
 ```
 
-## Comandos
+### Docker
+- Container acessa n8n via `http://n8n:5678` (rede `telegrambot_default`)
+- Ollama na máquina host: `http://192.168.1.105:11434` ou `host.docker.internal:11434`
+
+## Dependências
+
+`python-telegram-bot==21.6`, `python-dotenv==1.0.1`, `httpx`
+
+## Execução
 
 ```bash
-# Executar localmente (requer .env com BOT_TOKEN)
+# Local (requer .env)
 python bot/main.py
 
-# Operações Docker (no servidor)
+# Docker (no servidor)
 docker logs telegrambot-bot-1 --tail 30
 docker restart telegrambot-bot-1
-docker exec -it telegrambot-bot-1 sh
-
-# Testar conectividade n8n a partir do container
-docker exec telegrambot-bot-1 sh -c 'wget -q -O- http://n8n:5678 --timeout=5'
 ```
 
-## Arquivos gerados (gitignore)
+## Workflow n8n Mínimo
 
-- `planilha_financeira.xlsx` — criado por `criar_planilha.py`
-- `contexto_teletony.txt`, `contexto_financeiro.md`, `TeleTony.md` — documentação
+Para iniciar testes do zero, crie um workflow simples:
 
-## Melhorias futuras
+1. **Webhook** (POST /nlp)
+2. **Ollama node** (qwen2.5:1.5b)
+   - Prompt: `Process: {{ $json.text }}`
+3. **HTTP Request** → `https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/sendMessage`
+   - Body: `{"chat_id": {{ $json.user_id }}, "text": "Recebi: {{ $json.text }}"}`
 
-- **Usar Token do Telegram direto no n8n**: Em vez de webhooks com IP local, o n8n pode receber atualizações diretamente via `getUpdates` ou webhook do Telegram, simplificando a arquitetura e evitando problemas de conectividade Docker
+## Próximos Passos
+
+1. Configurar Ollama para extrair intent + campos
+2. Adicionar roteamento por intent (Switch node)
+3. Integrar Google Sheets para gastos/renda
+4. Comandos: saldo/extrato via n8n
