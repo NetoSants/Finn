@@ -1,15 +1,36 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: finn
+      POSTGRES_PASSWORD: finn
+      POSTGRES_DB: finn
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   bot:
     build: .
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      # No Docker, N8N_HOST padrão é 'n8n' (config.py). Override se necessário.
-      N8N_HOST: "n8n"
-      N8N_PORT: "5678"
-      N8N_WEBHOOK_PATH: "webhook-test"
-      # URL de NLP (Ollama) - no Docker usa o host 'n8n'
-      N8N_URL_NLP: "http://n8n:5678/webhook-test/nlp"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: finn
+      DB_USER: finn
+      DB_PASSWORD: finn
       TZ: "America/Sao_Paulo"
+
+volumes:
+  postgres_data:

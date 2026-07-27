@@ -1,58 +1,52 @@
-# TeleTony
+# Finn
 
-Bot do Telegram para controle financeiro, processamento via n8n + Ollama.
+Telegram bot for financial control. All UI strings are **Brazilian Portuguese**.
 
-## Arquitetura Simples
-
-- **Entrypoint**: `bot/main.py`
-- **Fluxo**: Bot (Docker) → Webhook n8n → Ollama (IA) → Telegram API / Google Sheets
-- **Processamento**: Todas as mensagens em linguagem natural via webhook NLP (`/nlp`)
-- **Sem comandos locais**: n8n roteia intents (gasto, renda, saldo, etc)
-
-## Configuração
-
-### Variáveis de ambiente (.env)
-```
-BOT_TOKEN=<token_telegram>
-N8N_HOST=n8n                    # DNS do container Docker
-N8N_PORT=5678
-N8N_WEBHOOK_PATH=webhook-test   # padrão
-N8N_URL_NLP=http://n8n:5678/webhook-test/nlp  # NLP (lowercase!)
-ALLOWED_USER_IDS=1401845586      # Seu User ID
-```
-
-### Docker
-- Container acessa n8n via `http://n8n:5678` (rede `telegrambot_default`)
-- Ollama na máquina host: `http://192.168.1.105:11434` ou `host.docker.internal:11434`
-
-## Dependências
-
-`python-telegram-bot==21.6`, `python-dotenv==1.0.1`, `httpx`
-
-## Execução
+## Run
 
 ```bash
-# Local (requer .env)
-python bot/main.py
-
-# Docker (no servidor)
-docker logs telegrambot-bot-1 --tail 30
-docker restart telegrambot-bot-1
+docker compose up -d db bot   # PostgreSQL + bot
+docker compose up -d db       # PostgreSQL only (local dev)
+python -m bot.main            # run bot directly (needs .env, DB running)
 ```
 
-## Workflow n8n Mínimo
+- Bot waits for DB healthcheck (`depends_on: db: condition: service_healthy`)
+- `init.sql` auto-runs on first DB startup
+- Timezone: `America/Sao_Paulo`
 
-Para iniciar testes do zero, crie um workflow simples:
+## Config (.env)
 
-1. **Webhook** (POST /nlp)
-2. **Ollama node** (qwen2.5:1.5b)
-   - Prompt: `Process: {{ $json.text }}`
-3. **HTTP Request** → `https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/sendMessage`
-   - Body: `{"chat_id": {{ $json.user_id }}, "text": "Recebi: {{ $json.text }}"}`
+```
+BOT_TOKEN=<token>
+DB_HOST=localhost            # use "db" when running inside Docker
+DB_PORT=5432 / DB_NAME=finn / DB_USER=finn / DB_PASSWORD=finn
+ALLOWED_USER_IDS=1401845586  # comma-separated Telegram user IDs
+```
 
-## Próximos Passos
+`bot/config.py` calls `load_dotenv()` at import time.
 
-1. Configurar Ollama para extrair intent + campos
-2. Adicionar roteamento por intent (Switch node)
-3. Integrar Google Sheets para gastos/renda
-4. Comandos: saldo/extrato via n8n
+## Architecture
+
+- **Entrypoint**: `python -m bot.main`
+- **Polling** with `drop_pending_updates=True`
+- **DB**: `psycopg2.pool.SimpleConnectionPool` (1-10) via `bot/database.py`
+  - `database.py` reads env vars via `os.getenv()` **independently** from `config.py` — changes in one don't affect the other
+  - All query helpers live in `bot/repository.py`
+
+## Gotchas
+
+- **Callback handlers bypass auth**: `CALLBACKS` in `main.py:42-43` are registered **without** the `restricted` wrapper. Only `COMMANDS` dict entries and the catch-all `MessageHandler` are protected. This means any Telegram user can trigger `gasto_callback` / `bancos_callback` if they guess the callback data.
+- **`ping` is undocumented**: present in `COMMANDS` dict but missing from the `BotCommand` list in `post_init()` — won't appear in Telegram's bot menu.
+- **`repository.py` commit behavior varies**: `_fetch` does NOT commit (read-only). `_fetch_one`, `_execute`, and `_insert` all call `commit()` (and `rollback()` on error). New query helpers should follow the same pattern.
+- **No tests, linting, or typechecking** are configured.
+
+## Adding a command
+
+1. Create `bot/handlers/<name>.py`
+2. Add handler + entry in `COMMANDS`/`CALLBACKS` dict in `bot/handlers/__init__.py`
+3. Add `BotCommand` entry in `post_init()` in `bot/main.py`
+
+## Tech stack
+
+- Python 3.11, `python-telegram-bot==21.6`, `psycopg2-binary`, `python-dotenv`
+- PostgreSQL 15 (Alpine), Docker Compose
