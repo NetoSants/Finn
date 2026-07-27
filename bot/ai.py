@@ -12,18 +12,18 @@ SYSTEM_PROMPT = """Analise a mensagem do usuario e retorne APENAS um JSON valido
 
 O JSON deve ter exatamente estes campos:
 - "tipo": "gasto" (se gasta dinheiro) ou "renda" (se recebe dinheiro)
-- "valor": o valor numerico (sem R$)
+- "valor": o valor numerico (sem R$) ou null se nao mencionado
 - "descricao": o que foi comprado ou de onde veio o dinheiro
-- "pagamento": "debito", "credito" ou "pix" (se nao mencionar, use "debito")
+- "pagamento": "debito", "credito", "pix" ou null se nao mencionado
 
 IMPORTANTE: Se a mensagem NAO for sobre registrar um gasto ou renda (ex: "bom dia", "obrigado", "ajuda"), retorne EXATAMENTE: {"erro": true}
 
 Exemplos:
-"gastei 50 no almoço" -> {"tipo": "gasto", "valor": 50, "descricao": "almoço", "pagamento": "debito"}
-"recebi 2000 de salario" -> {"tipo": "renda", "valor": 2000, "descricao": "salário", "pagamento": "pix"}
+"gastei 50 no almoço" -> {"tipo": "gasto", "valor": 50, "descricao": "almoço", "pagamento": null}
+"recebi 2000 de salario" -> {"tipo": "renda", "valor": 2000, "descricao": "salário", "pagamento": null}
 "paguei 35 no uber de credito" -> {"tipo": "gasto", "valor": 35, "descricao": "uber", "pagamento": "credito"}
-"bom dia" -> {"erro": true}
-"obrigado" -> {"erro": true}"""
+"gastei 20 no pix" -> {"tipo": "gasto", "valor": 20, "descricao": "pix", "pagamento": "pix"}
+"bom dia" -> {"erro": true}"""
 
 
 def interpretar_mensagem(texto: str) -> dict | None:
@@ -61,10 +61,12 @@ def interpretar_mensagem(texto: str) -> dict | None:
         if dados["tipo"] not in ("gasto", "renda"):
             return None
 
-        if "pagamento" not in dados:
-            dados["pagamento"] = "debito"
+        if dados["tipo"] == "renda":
+            dados["pagamento"] = None
+        elif "pagamento" not in dados or dados["pagamento"] is None:
+            dados["pagamento"] = None
         elif dados["pagamento"] not in ("debito", "credito", "pix"):
-            dados["pagamento"] = "debito"
+            dados["pagamento"] = None
 
         return dados
 

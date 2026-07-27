@@ -9,7 +9,7 @@ from .bancos import bancos, bancos_callback
 from .cadastrar_banco import cadastrar_banco
 from .remover_banco import remover_banco
 from .parcelas import parcelas, parcelar
-from .generic import ai_confirmar_callback, ai_cancelar_callback
+from .generic import ai_confirmar_callback, ai_cancelar_callback, pag_callback
 
 COMMANDS = {
     "start": start,
@@ -29,6 +29,7 @@ COMMANDS = {
 CALLBACKS = [
     ("^gasto_", gasto_callback),
     ("^bancos_", bancos_callback),
+    ("^pag_", pag_callback),
     ("^ai_confirmar$", ai_confirmar_callback),
     ("^ai_cancelar$", ai_cancelar_callback),
 ]
