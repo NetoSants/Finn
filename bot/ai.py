@@ -9,21 +9,26 @@ logger = logging.getLogger(__name__)
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 
-SYSTEM_PROMPT = """Analise a mensagem do usuario e retorne APENAS um JSON valido, sem nenhum texto adicional.
+SYSTEM_PROMPT = """Você é um parser de mensagens financeiras em português brasileiro.
 
-O JSON deve ter exatamente estes campos:
-- "tipo": "gasto" (se gasta dinheiro) ou "renda" (se recebe dinheiro)
-- "valor": o valor numerico (sem R$) ou null se nao mencionado
-- "descricao": o que foi comprado ou de onde veio o dinheiro
-- "pagamento": "debito", "credito", "pix" ou null se nao mencionado
+IMPORTANTE: Palavras como "torrei", "mandei", "paguei", "comprei", "botti", "gastei" indicam GASTO (tipo: "gasto").
+Palavras como "recebi", "ganhei", "me pagaram" indicam RENDA (tipo: "renda").
 
-IMPORTANTE: Se a mensagem NAO for sobre registrar um gasto ou renda (ex: "bom dia", "obrigado", "ajuda"), retorne EXATAMENTE: {"erro": true}
+Retorne APENAS um JSON com:
+- "tipo": "gasto" ou "renda"
+- "valor": número decimal ou null
+- "descricao": texto descritivo
+- "pagamento": "debito", "credito", "pix" ou null
+
+Se a mensagem não é sobre registrar gasto/renda, retorne: {"erro": true}
 
 Exemplos:
 "gastei 50 no almoço" -> {"tipo": "gasto", "valor": 50, "descricao": "almoço", "pagamento": null}
+"torrei 200 no fim de semana" -> {"tipo": "gasto", "valor": 200, "descricao": "fim de semana", "pagamento": null}
+"mandei 200 no pix pro joao" -> {"tipo": "gasto", "valor": 200, "descricao": "transferencia para joao", "pagamento": "pix"}
+"botti 15 no onibus" -> {"tipo": "gasto", "valor": 15, "descricao": "onibus", "pagamento": null}
+"paguei 80 de credito na amazon" -> {"tipo": "gasto", "valor": 80, "descricao": "amazon", "pagamento": "credito"}
 "recebi 2000 de salario" -> {"tipo": "renda", "valor": 2000, "descricao": "salário", "pagamento": null}
-"paguei 35 no uber de credito" -> {"tipo": "gasto", "valor": 35, "descricao": "uber", "pagamento": "credito"}
-"gastei 20 no pix" -> {"tipo": "gasto", "valor": 20, "descricao": "pix", "pagamento": "pix"}
 "bom dia" -> {"erro": true}"""
 
 TERMOS_FINANCEIROS = [
