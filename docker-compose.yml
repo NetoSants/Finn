@@ -17,12 +17,22 @@ services:
       timeout: 5s
       retries: 5
 
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
   bot:
     build: .
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       DB_HOST: db
@@ -30,7 +40,10 @@ services:
       DB_NAME: finn
       DB_USER: finn
       DB_PASSWORD: finn
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:0.5b
       TZ: "America/Sao_Paulo"
 
 volumes:
   postgres_data:
+  ollama_data:

@@ -21,6 +21,8 @@ BOT_TOKEN=<token>
 DB_HOST=localhost            # use "db" when running inside Docker
 DB_PORT=5432 / DB_NAME=finn / DB_USER=finn / DB_PASSWORD=finn
 ALLOWED_USER_IDS=1401845586  # comma-separated Telegram user IDs
+OLLAMA_HOST=http://localhost:11434  # use "http://ollama:11434" in Docker
+OLLAMA_MODEL=qwen2.5:0.5b
 ```
 
 `bot/config.py` calls `load_dotenv()` at import time.
@@ -32,6 +34,10 @@ ALLOWED_USER_IDS=1401845586  # comma-separated Telegram user IDs
 - **DB**: `psycopg2.pool.SimpleConnectionPool` (1-10) via `bot/database.py`
   - `database.py` reads env vars via `os.getenv()` **independently** from `config.py` — changes in one don't affect the other
   - All query helpers live in `bot/repository.py`
+- **AI**: Ollama integration via `bot/ai.py`
+  - Interprets informal messages (e.g., "gastei 50 no almoço")
+  - Returns structured JSON for confirmation before saving
+  - Model: `qwen2.5:0.5b` (lightweight, runs on CPU)
 
 ## Gotchas
 
