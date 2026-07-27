@@ -22,10 +22,11 @@ async def extrato(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = "**Extrato (ultimas 20):**\n\n"
     for row in rows:
-        tipo, valor, descricao, pagamento, data_transacao = row
+        tipo, valor, descricao, pagamento, data_transacao, cat_nome, cat_emoji = row
         emoji = "G" if tipo == "gasto" else "R"
+        cat = f" {cat_emoji}" if cat_emoji else ""
         pago = f" ({pagamento})" if pagamento else ""
         data_str = data_transacao.strftime('%d/%m') if data_transacao else "??/??"
-        msg += f"{emoji} {data_str}: R$ {valor:.2f} - {descricao}{pago}\n"
+        msg += f"{emoji} {data_str}: R$ {valor:.2f} - {descricao}{cat}{pago}\n"
 
     await update.message.reply_text(msg, parse_mode="Markdown")

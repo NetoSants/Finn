@@ -9,6 +9,8 @@ from .bancos import bancos, bancos_callback
 from .cadastrar_banco import cadastrar_banco
 from .remover_banco import remover_banco
 from .parcelas import parcelas, parcelar
+from .meta import meta
+from .categorias import categorias
 from .generic import ai_confirmar_callback, ai_cancelar_callback, pag_callback
 
 COMMANDS = {
@@ -24,6 +26,8 @@ COMMANDS = {
     "remover_banco": remover_banco,
     "parcelas": parcelas,
     "parcelar": parcelar,
+    "meta": meta,
+    "categorias": categorias,
 }
 
 CALLBACKS = [

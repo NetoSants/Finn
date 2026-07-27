@@ -6,6 +6,7 @@ from bot.config import BOT_TOKEN
 from bot.decorators import restricted
 from bot.handlers import COMMANDS, CALLBACKS
 from bot.handlers.generic import process_message
+from bot.migrations import run_migrations
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,16 @@ async def post_init(application):
         BotCommand("extrato", "Mostra extrato"),
         BotCommand("parcelas", "Lista parcelas"),
         BotCommand("parcelar", "Cadastra parcela"),
+        BotCommand("meta", "Define/consulta metas mensais"),
+        BotCommand("categorias", "Lista categorias"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("Finn configured!")
 
 
 async def main():
+    run_migrations()
+
     application = (
         ApplicationBuilder()
         .token(BOT_TOKEN)

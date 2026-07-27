@@ -1,5 +1,25 @@
 -- Finn Database Schema
 
+-- Categorias
+CREATE TABLE IF NOT EXISTS categorias (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL UNIQUE,
+    emoji VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO categorias (nome, emoji) VALUES
+    ('Alimentação', '🍔'),
+    ('Transporte', '🚗'),
+    ('Moradia', '🏠'),
+    ('Saúde', '💊'),
+    ('Lazer', '🎮'),
+    ('Educação', '📚'),
+    ('Roupa', '👕'),
+    ('Serviços', '🔧'),
+    ('Outros', '📦')
+ON CONFLICT (nome) DO NOTHING;
+
 -- Bancos (cartões de crédito)
 CREATE TABLE IF NOT EXISTS bancos (
     id SERIAL PRIMARY KEY,
@@ -16,6 +36,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     valor DECIMAL(12,2) NOT NULL,
     descricao TEXT,
     pagamento VARCHAR(20) CHECK (pagamento IN ('debito', 'credito', 'pix', NULL)),
+    categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL,
     banco_id INTEGER REFERENCES bancos(id) ON DELETE SET NULL,
     data_transacao DATE NOT NULL DEFAULT CURRENT_DATE,
     user_id BIGINT NOT NULL,
@@ -39,9 +60,23 @@ CREATE TABLE IF NOT EXISTS parcelas (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Metas mensais por categoria
+CREATE TABLE IF NOT EXISTS metas (
+    id SERIAL PRIMARY KEY,
+    categoria_id INTEGER NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
+    mes INTEGER NOT NULL CHECK (mes >= 1 AND mes <= 12),
+    ano INTEGER NOT NULL,
+    limite DECIMAL(12,2) NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(categoria_id, mes, ano, user_id)
+);
+
 -- Índices para performance
 CREATE INDEX IF NOT EXISTS idx_transacoes_user_id ON transacoes(user_id);
 CREATE INDEX IF NOT EXISTS idx_transacoes_data ON transacoes(data_transacao);
 CREATE INDEX IF NOT EXISTS idx_transacoes_tipo ON transacoes(tipo);
+CREATE INDEX IF NOT EXISTS idx_transacoes_categoria ON transacoes(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_parcelas_user_id ON parcelas(user_id);
 CREATE INDEX IF NOT EXISTS idx_parcelas_pago ON parcelas(pago);
+CREATE INDEX IF NOT EXISTS idx_metas_user_mes ON metas(user_id, mes, ano);

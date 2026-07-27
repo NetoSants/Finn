@@ -31,8 +31,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       DB_HOST: db
@@ -43,6 +41,8 @@ services:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:0.5b
       TZ: "America/Sao_Paulo"
+    ports:
+      - "8501:8501"
 
 volumes:
   postgres_data:

@@ -55,10 +55,10 @@ def _insert(query, params=None):
 
 # --- Transacoes ---
 
-def inserir_transacao(tipo, valor, descricao, pagamento, user_id, username):
+def inserir_transacao(tipo, valor, descricao, pagamento, user_id, username, categoria_id=None):
     return _insert(
-        "INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, username) VALUES (%s, %s, %s, %s, %s, %s)",
-        (tipo, valor, descricao, pagamento, user_id, username)
+        "INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, username, categoria_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (tipo, valor, descricao, pagamento, user_id, username, categoria_id)
     )
 
 
@@ -71,7 +71,10 @@ def inserir_renda(valor, descricao, user_id, username):
 
 def listar_transacoes(user_id, limite=20):
     return _fetch(
-        "SELECT tipo, valor, descricao, pagamento, data_transacao FROM transacoes WHERE user_id = %s ORDER BY created_at DESC LIMIT %s",
+        """SELECT t.tipo, t.valor, t.descricao, t.pagamento, t.data_transacao, c.nome, c.emoji
+           FROM transacoes t
+           LEFT JOIN categorias c ON c.id = t.categoria_id
+           WHERE t.user_id = %s ORDER BY t.created_at DESC LIMIT %s""",
         (user_id, limite)
     )
 
@@ -95,6 +98,77 @@ def contar_transacoes(user_id):
         "SELECT COUNT(*) FROM transacoes WHERE user_id = %s",
         (user_id,)
     )[0]
+
+
+# --- Categorias ---
+
+def listar_categorias():
+    return _fetch("SELECT id, nome, emoji FROM categorias ORDER BY id")
+
+
+def buscar_categoria_por_nome(nome):
+    return _fetch_one(
+        "SELECT id, nome, emoji FROM categorias WHERE LOWER(nome) = LOWER(%s)",
+        (nome,)
+    )
+
+
+def criar_categoria(nome, emoji=None):
+    return _insert(
+        "INSERT INTO categorias (nome, emoji) VALUES (%s, %s)",
+        (nome, emoji)
+    )
+
+
+# --- Metas ---
+
+def definir_meta(categoria_id, mes, ano, limite, user_id):
+    return _execute(
+        """INSERT INTO metas (categoria_id, mes, ano, limite, user_id)
+           VALUES (%s, %s, %s, %s, %s)
+           ON CONFLICT (categoria_id, mes, ano, user_id)
+           DO UPDATE SET limite = EXCLUDED.limite""",
+        (categoria_id, mes, ano, limite, user_id)
+    )
+
+
+def buscar_meta(categoria_id, mes, ano, user_id):
+    return _fetch_one(
+        "SELECT id, limite FROM metas WHERE categoria_id = %s AND mes = %s AND ano = %s AND user_id = %s",
+        (categoria_id, mes, ano, user_id)
+    )
+
+
+def listar_metas(mes, ano, user_id):
+    return _fetch(
+        """SELECT m.id, c.nome, c.emoji, m.limite,
+                  COALESCE(SUM(t.valor), 0) as gasto_total
+           FROM metas m
+           JOIN categorias c ON c.id = m.categoria_id
+           LEFT JOIN transacoes t ON t.categoria_id = m.categoria_id
+               AND t.tipo = 'gasto' AND t.user_id = m.user_id
+               AND EXTRACT(MONTH FROM t.data_transacao) = m.mes
+               AND EXTRACT(YEAR FROM t.data_transacao) = m.ano
+           WHERE m.mes = %s AND m.ano = %s AND m.user_id = %s
+           GROUP BY m.id, c.nome, c.emoji, m.limite
+           ORDER BY c.nome""",
+        (mes, ano, user_id)
+    )
+
+
+def gasto_por_categoria(user_id, mes, ano):
+    return _fetch(
+        """SELECT c.nome, c.emoji, COALESCE(SUM(t.valor), 0) as total
+           FROM categorias c
+           LEFT JOIN transacoes t ON t.categoria_id = c.id
+               AND t.tipo = 'gasto' AND t.user_id = %s
+               AND EXTRACT(MONTH FROM t.data_transacao) = %s
+               AND EXTRACT(YEAR FROM t.data_transacao) = %s
+           GROUP BY c.id, c.nome, c.emoji
+           HAVING COALESCE(SUM(t.valor), 0) > 0
+           ORDER BY total DESC""",
+        (user_id, mes, ano)
+    )
 
 
 # --- Bancos ---

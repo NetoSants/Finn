@@ -21,16 +21,32 @@ async def gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['gasto_valor'] = valor
     context.user_data['gasto_descricao'] = descricao
 
-    keyboard = [
-        [
-            InlineKeyboardButton("Debito", callback_data="gasto_debito"),
-            InlineKeyboardButton("Credito", callback_data="gasto_credito"),
-            InlineKeyboardButton("Pix", callback_data="gasto_pix"),
-        ]
-    ]
+    categorias = repository.listar_categorias()
+
+    if not categorias:
+        await update.message.reply_text(
+            f"Selecione o tipo de pagamento para:\nR$ {valor:.2f} - {descricao}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("Debito", callback_data="gasto_debito"),
+                InlineKeyboardButton("Credito", callback_data="gasto_credito"),
+                InlineKeyboardButton("Pix", callback_data="gasto_pix"),
+            ]])
+        )
+        return
+
+    keyboard = []
+    row = []
+    for cat in categorias:
+        label = f"{cat[2]} {cat[1]}" if cat[2] else cat[1]
+        row.append(InlineKeyboardButton(label, callback_data=f"gasto_cat_{cat[0]}"))
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
 
     await update.message.reply_text(
-        f"Selecione o tipo de pagamento para:\nR$ {valor:.2f} - {descricao}",
+        f"R$ {valor:.2f} - {descricao}\n\nSelecione a categoria:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -39,7 +55,7 @@ async def gasto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    payment_type = query.data.replace("gasto_", "")
+    data = query.data
     valor = context.user_data.get('gasto_valor')
     descricao = context.user_data.get('gasto_descricao')
 
@@ -47,10 +63,34 @@ async def gasto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("Erro: dados do gasto nao encontrados. Tente novamente.")
         return
 
+    if data.startswith("gasto_cat_"):
+        categoria_id = int(data.replace("gasto_cat_", ""))
+        context.user_data['gasto_categoria_id'] = categoria_id
+
+        keyboard = [
+            [
+                InlineKeyboardButton("Debito", callback_data="gasto_debito"),
+                InlineKeyboardButton("Credito", callback_data="gasto_credito"),
+                InlineKeyboardButton("Pix", callback_data="gasto_pix"),
+            ]
+        ]
+
+        await query.edit_message_text(
+            f"R$ {valor:.2f} - {descricao}\n\nSelecione o tipo de pagamento:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
+    payment_type = data.replace("gasto_", "")
+    categoria_id = context.user_data.pop('gasto_categoria_id', None)
+
     user = update.effective_user
 
     try:
-        repository.inserir_transacao('gasto', valor, descricao, payment_type, user.id, user.username)
+        repository.inserir_transacao(
+            'gasto', valor, descricao, payment_type,
+            user.id, user.username, categoria_id
+        )
         await query.edit_message_text(f"Gasto de R$ {valor:.2f} registrado: {descricao}\nPagamento: {payment_type}")
     except Exception as e:
         logger.error(f"Erro ao registrar gasto: {e}")
