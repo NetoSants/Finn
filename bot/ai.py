@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import requests
@@ -25,8 +26,34 @@ Exemplos:
 "gastei 20 no pix" -> {"tipo": "gasto", "valor": 20, "descricao": "pix", "pagamento": "pix"}
 "bom dia" -> {"erro": true}"""
 
+TERMOS_FINANCEIROS = [
+    "gastei", "gasto", "paguei", "pago", "comprei", "compra",
+    "recebi", "recebo", "ganhei", "ganho", "renda", "salario", "salário",
+    "freelance", "cashback", "estorno", "reembolso", "bonus", "bônus",
+    "debito", "débito", "credito", "crédito", "pix", "transferi",
+    "deposito", "depósito", "saque", "troco",
+    "conta", "fatura", "boleto", "parcela",
+]
+
+
+def _tem_termo_financeiro(texto: str) -> bool:
+    texto_lower = texto.lower()
+    return any(termo in texto_lower for termo in TERMOS_FINANCEIROS)
+
+
+def _tem_numero(texto: str) -> bool:
+    return bool(re.search(r"\d", texto))
+
 
 def interpretar_mensagem(texto: str) -> dict | None:
+    texto = texto.strip()
+
+    if len(texto.split()) < 2:
+        return None
+
+    if not _tem_termo_financeiro(texto) and not _tem_numero(texto):
+        return None
+
     try:
         resp = requests.post(
             f"{OLLAMA_HOST}/api/generate",
@@ -53,6 +80,9 @@ def interpretar_mensagem(texto: str) -> dict | None:
         if not all(k in dados for k in ("tipo", "valor", "descricao")):
             return None
 
+        if dados["valor"] is None:
+            return None
+
         dados["valor"] = float(dados["valor"])
 
         if dados["valor"] <= 0:
@@ -63,9 +93,7 @@ def interpretar_mensagem(texto: str) -> dict | None:
 
         if dados["tipo"] == "renda":
             dados["pagamento"] = None
-        elif "pagamento" not in dados or dados["pagamento"] is None:
-            dados["pagamento"] = None
-        elif dados["pagamento"] not in ("debito", "credito", "pix"):
+        elif dados.get("pagamento") not in ("debito", "credito", "pix", None):
             dados["pagamento"] = None
 
         return dados

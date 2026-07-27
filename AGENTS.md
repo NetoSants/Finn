@@ -39,6 +39,16 @@ OLLAMA_MODEL=qwen2.5:0.5b
   - Returns structured JSON for confirmation before saving
   - Model: `qwen2.5:0.5b` (lightweight, runs on CPU)
 
+## AI
+
+- **Ollama** integration via `bot/ai.py`
+- Interprets informal messages (e.g., "gastei 50 no almoço")
+- Returns structured JSON for confirmation before saving
+- Model: `qwen2.5:0.5b` (lightweight, runs on CPU)
+- **Pre-filter**: checks for financial keywords before calling Ollama to avoid wasting time on non-financial messages
+- **Accuracy**: 85.7% (36/42 tests) — see `test_completo.py` for full test suite
+- Known weak spots: model sometimes confuses gasto/renda for informal phrasing ("torrei 200", "paguei de credito na amazon")
+
 ## Gotchas
 
 - **Callback handlers bypass auth**: `CALLBACKS` in `main.py:42-43` are registered **without** the `restricted` wrapper. Only `COMMANDS` dict entries and the catch-all `MessageHandler` are protected. This means any Telegram user can trigger `gasto_callback` / `bancos_callback` if they guess the callback data.
