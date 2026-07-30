@@ -6,8 +6,18 @@
     <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Fixos</h1>
 </div>
 
+{% if request.query_params.get('gerados') %}
+<div class="mb-6 px-4 py-3 rounded-xl flex items-center gap-3" style="background:var(--accent-soft); color:var(--accent);">
+    <i data-lucide="check-circle" class="w-5 h-5 shrink-0"></i>
+    <span class="text-sm font-medium">{{ request.query_params.get('gerados') }} lançamento(s) gerado(s) para este mês!</span>
+</div>
+{% endif %}
+
 <div class="card mb-6">
-    <h2 class="font-display text-base font-semibold mb-4" style="color:var(--text-primary);">Novo Fixo</h2>
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-base font-semibold" style="color:var(--text-primary);">Novo Fixo</h2>
+        <span class="text-xs px-3 py-1 rounded-full font-medium" style="background:var(--surface-2); color:var(--text-muted);">Recorrente</span>
+    </div>
     <form method="post" action="/fixos/criar">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
@@ -67,6 +77,15 @@
 </div>
 
 {% if fixos %}
+<div class="flex items-center justify-between mb-4">
+    <p class="text-sm" style="color:var(--text-muted);">{{ fixos|length }} fixo(s) cadastrado(s)</p>
+    <form method="post" action="/fixos/gerar">
+        <button type="submit" class="px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2" style="background:var(--accent); color:#000;">
+            <i data-lucide="play" class="w-4 h-4"></i>
+            Gerar lançamentos do mês
+        </button>
+    </form>
+</div>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for f in fixos %}
     {% set fixo_id, tipo, valor, descricao, pagamento, parcelas, dia, ativo, cat_nome, cat_emoji, banco_nome = f %}
@@ -106,9 +125,11 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="text-center py-12">
-    <i data-lucide="repeat" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted);"></i>
-    <p class="text-lg" style="color:var(--text-muted);">Nenhum fixo cadastrado</p>
+<div class="text-center py-16">
+    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:var(--surface-2);">
+        <i data-lucide="repeat" class="w-8 h-8" style="color:var(--text-muted);"></i>
+    </div>
+    <p class="text-lg font-medium" style="color:var(--text-primary);">Nenhum fixo cadastrado</p>
     <p class="text-sm mt-1" style="color:var(--text-muted);">Cadastre seus gastos e rendas recorrentes acima</p>
 </div>
 {% endif %}

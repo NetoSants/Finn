@@ -28,6 +28,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Saldo</span>
         </div>
         <p class="text-2xl font-bold font-display" style="color: {% if saldo >= 0 %}var(--accent){% else %}var(--danger){% endif %};">R$ {{ saldo|fmt }}</p>
+        {% if prev_saldo_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_saldo_pct >= 0 %}var(--accent){% else %}var(--danger){% endif %};">
+            {% if prev_saldo_pct >= 0 %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_saldo_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
     <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
         <div class="flex items-center gap-2 mb-2">
@@ -35,6 +41,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Gastos</span>
         </div>
         <p class="text-2xl font-bold font-display" style="color:var(--danger);">R$ {{ total_gastos|fmt }}</p>
+        {% if prev_gastos_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_gastos_pct <= 0 %}var(--accent){% else %}var(--danger){% endif %};">
+            {% if prev_gastos_pct <= 0 %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_gastos_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
     <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
         <div class="flex items-center gap-2 mb-2">
@@ -42,6 +54,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Rendas</span>
         </div>
         <p class="text-2xl font-bold font-display" style="color:var(--accent);">R$ {{ total_rendas|fmt }}</p>
+        {% if prev_rendas_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_rendas_pct >= 0 %}var(--accent){% else %}var(--danger){% endif %};">
+            {% if prev_rendas_pct >= 0 %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_rendas_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
     <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
         <div class="flex items-center gap-2 mb-2">
@@ -49,6 +67,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Hoje</span>
         </div>
         <p class="text-2xl font-bold font-display" style="color:var(--warning);">R$ {{ gastos_hoje|fmt }}</p>
+        {% if prev_gastos_hoje_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_gastos_hoje_pct <= 0 %}var(--accent){% else %}var(--danger){% endif %};">
+            {% if prev_gastos_hoje_pct <= 0 %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_gastos_hoje_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
 </div>
 
@@ -59,6 +83,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Média diária</span>
         </div>
         <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">R$ {{ "%.2f"|format(media_diaria) }}</p>
+        {% if prev_media_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_media_pct <= 0 %}var(--accent){% else %}var(--danger){% endif %};">
+            {% if prev_media_pct <= 0 %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_media_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
     <div class="stat-card">
         <div class="flex items-center gap-2 mb-1">
@@ -69,7 +99,8 @@
         <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">R$ {{ maior_gasto[0]|fmt }}</p>
         <p class="text-sm truncate" style="color:var(--text-muted);">{{ maior_gasto[1] }}</p>
         {% else %}
-        <p class="text-xl font-semibold" style="color:var(--text-muted);">-</p>
+        <p class="text-xl font-semibold" style="color:var(--text-muted);">—</p>
+        <p class="text-sm" style="color:var(--text-muted);">Nenhum gasto neste mês</p>
         {% endif %}
     </div>
     <div class="stat-card">
@@ -78,6 +109,12 @@
             <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Transações</span>
         </div>
         <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">{{ total_transacoes }}</p>
+        {% if prev_transacoes_pct is not none %}
+        <span class="text-xs font-medium mt-1 inline-flex items-center gap-0.5" style="color:{% if prev_transacoes_pct >= 0 %}var(--accent){% else %}var(--text-muted){% endif %};">
+            {% if prev_transacoes_pct >= 0 %}<i data-lucide="trending-up" class="w-3 h-3"></i>{% else %}<i data-lucide="trending-down" class="w-3 h-3"></i>{% endif %}
+            {{ "%.1f"|format(prev_transacoes_pct|abs) }}% vs mês anterior
+        </span>
+        {% endif %}
     </div>
 </div>
 
@@ -121,7 +158,10 @@
         {% if categorias %}
         <div style="height:280px"><canvas id="chartCat"></canvas></div>
         {% else %}
-        <p class="text-center py-8" style="color:var(--text-muted);">Nenhum gasto neste mês</p>
+        <div class="flex flex-col items-center justify-center py-12" style="color:var(--text-muted);">
+            <i data-lucide="pie-chart" class="w-10 h-10 mb-3" style="color:var(--text-muted);"></i>
+            <p>Nenhum gasto neste mês</p>
+        </div>
         {% endif %}
     </div>
     <div class="card">
@@ -129,7 +169,10 @@
         {% if total_gastos > 0 %}
         <div style="height:280px"><canvas id="chartDia"></canvas></div>
         {% else %}
-        <p class="text-center py-8" style="color:var(--text-muted);">Nenhum gasto neste mês</p>
+        <div class="flex flex-col items-center justify-center py-12" style="color:var(--text-muted);">
+            <i data-lucide="bar-chart-3" class="w-10 h-10 mb-3" style="color:var(--text-muted);"></i>
+            <p>Nenhum gasto neste mês</p>
+        </div>
         {% endif %}
     </div>
 </div>
@@ -174,7 +217,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% else %}
+<div class="card mb-8">
+    <div class="flex flex-col items-center justify-center py-8" style="color:var(--text-muted);">
+        <i data-lucide="calendar-heatmap" class="w-10 h-10 mb-3" style="color:var(--text-muted);"></i>
+        <p>Sem dados para o mapa de calor neste mês</p>
+    </div>
+</div>
 {% endif %}
+
+<div class="card mb-8">
+    <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Evolução do patrimônio</h2>
+    {% if saldo != 0 or total_gastos > 0 or total_rendas > 0 %}
+    <div style="height:280px"><canvas id="chartPatrimonio"></canvas></div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12" style="color:var(--text-muted);">
+        <i data-lucide="line-chart" class="w-10 h-10 mb-3" style="color:var(--text-muted);"></i>
+        <p>Registre transações para ver a evolução</p>
+    </div>
+    {% endif %}
+</div>
 
 {% if metas %}
 <div class="card mb-8">
@@ -210,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 {% if ultimas %}
-<div class="card">
+<div class="card mb-8">
     <div class="flex items-center justify-between mb-4">
         <h2 class="font-display text-lg font-semibold" style="color:var(--text-primary);">Últimas transações</h2>
         <a href="/transacoes?mes={{ mes }}&ano={{ ano }}" class="text-sm font-medium" style="color:var(--accent);">Ver todas &rarr;</a>
@@ -284,9 +346,39 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        lucide.createIcons();
-    });
+    fetch('/api/evolucao_patrimonio')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.labels.length) return;
+            const gradient = document.getElementById('chartPatrimonio').getContext('2d').createLinearGradient(0,0,0,280);
+            gradient.addColorStop(0, 'rgba(74,222,128,0.2)');
+            gradient.addColorStop(1, 'rgba(74,222,128,0)');
+            new Chart(document.getElementById('chartPatrimonio'), {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        borderColor: '#4ade80',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#4ade80',
+                        pointHoverRadius: 5,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor } },
+                        y: { beginAtZero: false, grid: { color: gridColor }, ticks: { color: textColor } }
+                    }
+                }
+            });
+        });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Editar Transação{% endblock %}
+{% block content %}
+
+<div class="max-w-lg mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Editar Transação</h1>
+        <a href="/transacoes" class="text-sm font-medium transition" style="color:var(--text-secondary);">
+            <i data-lucide="arrow-left" class="w-4 h-4 inline mr-1"></i>Voltar
+        </a>
+    </div>
+
+    <div class="card">
+        <form method="post" action="/transacoes/{{ tx.id }}/editar">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Tipo</label>
+                    <select name="tipo" class="input-field">
+                        <option value="gasto" {% if tx.tipo == 'gasto' %}selected{% endif %}>Gasto</option>
+                        <option value="renda" {% if tx.tipo == 'renda' %}selected{% endif %}>Renda</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Valor (R$)</label>
+                    <input type="number" name="valor" step="0.01" min="0.01" value="{{ "%.2f"|format(tx.valor) }}" required class="input-field">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Descrição</label>
+                <input type="text" name="descricao" value="{{ tx.descricao or '' }}" required class="input-field">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Pagamento</label>
+                    <select name="pagamento" class="input-field">
+                        <option value="debito" {% if tx.pagamento == 'debito' %}selected{% endif %}>Débito</option>
+                        <option value="credito" {% if tx.pagamento == 'credito' %}selected{% endif %}>Crédito</option>
+                        <option value="pix" {% if tx.pagamento == 'pix' %}selected{% endif %}>Pix</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Categoria</label>
+                    <select name="categoria_id" class="input-field">
+                        <option value="">Nenhuma</option>
+                        {% for c in categorias %}
+                        <option value="{{ c[0] }}" {% if tx.categoria_id == c[0] %}selected{% endif %}>{{ c[2] or '' }} {{ c[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Banco</label>
+                    <select name="banco_id" class="input-field">
+                        <option value="">Nenhum</option>
+                        {% for b in bancos %}
+                        <option value="{{ b[0] }}" {% if tx.banco_id == b[0] %}selected{% endif %}>{{ b[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Parcelas</label>
+                <input type="number" name="parcelas" min="1" max="12" value="{{ tx.parcelas }}" class="input-field" style="max-width:120px;">
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="btn-primary">Salvar</button>
+                <a href="/transacoes" class="px-4 py-2 rounded-xl text-sm font-medium transition" style="background:var(--surface-1); color:var(--text-secondary);">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

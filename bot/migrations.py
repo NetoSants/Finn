@@ -78,6 +78,18 @@ MIGRATIONS = [
     """
     CREATE INDEX IF NOT EXISTS idx_fixos_user_id ON fixos(user_id);
     """,
+    # Coluna fixo_origin_id nas transacoes (para rastrear geracao automatica)
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'transacoes' AND column_name = 'fixo_origin_id'
+        ) THEN
+            ALTER TABLE transacoes ADD COLUMN fixo_origin_id INTEGER REFERENCES fixos(id) ON DELETE SET NULL;
+        END IF;
+    END $$;
+    """,
 ]
 
 

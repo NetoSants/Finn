@@ -21,7 +21,7 @@
     </div>
 </div>
 
-<div class="flex gap-2 mb-6">
+<div class="flex gap-2 mb-6 flex-wrap">
     <a href="/transacoes?mes={{ mes }}&ano={{ ano }}"
        class="px-4 py-2 rounded-xl text-sm font-medium transition"
        style="{% if not tipo_filtro %}background:var(--text-primary); color:var(--surface-0);{% else %}background:var(--surface-1); color:var(--text-secondary);{% endif %}">
@@ -37,6 +37,47 @@
        style="{% if tipo_filtro == 'renda' %}background:var(--accent); color:#000;{% else %}background:var(--surface-1); color:var(--text-secondary);{% endif %}">
         Rendas
     </a>
+</div>
+
+<div class="card mb-6">
+    <form method="get" action="/transacoes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <input type="hidden" name="ano" value="{{ ano }}">
+        <div>
+            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Busca</label>
+            <input type="text" name="busca" value="{{ busca or '' }}" placeholder="Descrição..." class="input-field">
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Categoria</label>
+            <select name="categoria_id" class="input-field">
+                <option value="">Todas</option>
+                {% for c in categorias %}
+                <option value="{{ c[0] }}" {% if categoria_id == c[0] %}selected{% endif %}>{{ c[2] or '' }} {{ c[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Banco</label>
+            <select name="banco_id" class="input-field">
+                <option value="">Todos</option>
+                {% for b in bancos %}
+                <option value="{{ b[0] }}" {% if banco_id == b[0] %}selected{% endif %}>{{ b[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">De</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio or '' }}" class="input-field">
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Até</label>
+            <input type="date" name="data_fim" value="{{ data_fim or '' }}" class="input-field">
+        </div>
+        <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
+            <button type="submit" class="btn-primary">Filtrar</button>
+            <a href="/transacoes?mes={{ mes }}&ano={{ ano }}" class="px-4 py-2 rounded-xl text-sm font-medium transition" style="background:var(--surface-1); color:var(--text-secondary);">Limpar</a>
+        </div>
+    </form>
 </div>
 
 <div class="card">
@@ -60,18 +101,32 @@
             <span class="text-sm font-semibold shrink-0" style="color:{% if tipo == 'gasto' %}var(--danger){% else %}var(--accent){% endif %};">
                 {% if tipo == 'gasto' %}-{% else %}+{% endif %} R$ {{ valor|fmt }}
             </span>
-            <form method="post" action="/transacoes/{{ id }}/deletar" onsubmit="return confirm('Deletar esta transação?')" class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center transition" style="color:var(--text-muted);" title="Deletar">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-            </form>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <a href="/transacoes/{{ id }}/editar" class="w-7 h-7 rounded-lg flex items-center justify-center transition" style="color:var(--text-muted);" title="Editar">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </a>
+                <form method="post" action="/transacoes/{{ id }}/deletar" onsubmit="return confirm('Deletar esta transação?')">
+                    <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center transition" style="color:var(--danger);" title="Deletar">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+            </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="text-center py-12">
-        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted);"></i>
-        <p class="text-lg" style="color:var(--text-muted);">Nenhuma transação encontrada</p>
+    <div class="text-center py-16">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:var(--surface-2);">
+            <i data-lucide="inbox" class="w-8 h-8" style="color:var(--text-muted);"></i>
+        </div>
+        <p class="text-lg font-medium" style="color:var(--text-primary);">Nenhuma transação encontrada</p>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">
+            {% if busca or categoria_id or banco_id or data_inicio or data_fim %}
+            Nenhum resultado para os filtros aplicados. <a href="/transacoes?mes={{ mes }}&ano={{ ano }}" style="color:var(--accent);">Limpar filtros</a>
+            {% else %}
+            Nenhuma transação registrada neste mês. Use o bot do Telegram para adicionar.
+            {% endif %}
+        </p>
     </div>
     {% endif %}
 </div>

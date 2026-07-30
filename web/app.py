@@ -177,6 +177,24 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     )
     heatmap = [(int(dia), float(val)) for dia, val in heatmap_raw]
 
+    # Comparativo mes anterior
+    prev_mes = mes - 1 if mes > 1 else 12
+    prev_ano = ano if mes > 1 else ano - 1
+    prev_gastos = _fetch_one(
+        "SELECT COALESCE(SUM(valor),0) FROM transacoes WHERE tipo='gasto' AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
+        (USER_ID, prev_mes, prev_ano)
+    )[0]
+    prev_rendas = _fetch_one(
+        "SELECT COALESCE(SUM(valor),0) FROM transacoes WHERE tipo='renda' AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
+        (USER_ID, prev_mes, prev_ano)
+    )[0]
+    prev_saldo = prev_rendas - prev_gastos
+
+    def pct_change(current, previous):
+        if previous and previous > 0:
+            return round((float(current) - float(previous)) / float(previous) * 100, 1)
+        return None
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "total_gastos": total_gastos,
         "total_rendas": total_rendas,
@@ -193,6 +211,21 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
         "mes": mes,
         "ano": ano,
         "mes_nome": meses_map.get(mes, ""),
+        "prev_gastos_pct": pct_change(total_gastos, prev_gastos),
+        "prev_rendas_pct": pct_change(total_rendas, prev_rendas),
+        "prev_saldo_pct": pct_change(saldo, prev_saldo),
+        "prev_media_pct": pct_change(media_diaria, float(prev_gastos) / max(_fetch_one(
+            "SELECT COUNT(DISTINCT data_transacao) FROM transacoes WHERE tipo='gasto' AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
+            (USER_ID, prev_mes, prev_ano)
+        )[0], 1)),
+        "prev_transacoes_pct": pct_change(total_transacoes, _fetch_one(
+            "SELECT COUNT(*) FROM transacoes WHERE user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
+            (USER_ID, prev_mes, prev_ano)
+        )[0]),
+        "prev_gastos_hoje_pct": pct_change(gastos_hoje, _fetch_one(
+            "SELECT COALESCE(SUM(valor),0) FROM transacoes WHERE tipo='gasto' AND user_id=%s AND data_transacao=CURRENT_DATE - INTERVAL '1 month'",
+            (USER_ID,)
+        )[0]),
     })
 
 
@@ -202,17 +235,46 @@ async def transacoes(
     mes: int = Query(default=None),
     ano: int = Query(default=None),
     tipo: str = Query(default=None),
+    busca: str = Query(default=None),
+    categoria_id: int = Query(default=None),
+    banco_id: int = Query(default=None),
+    data_inicio: str = Query(default=None),
+    data_fim: str = Query(default=None),
 ):
     hoje = date.today()
     mes = mes or hoje.month
     ano = ano or hoje.year
 
-    where = "WHERE t.user_id=%s AND EXTRACT(MONTH FROM t.data_transacao)=%s AND EXTRACT(YEAR FROM t.data_transacao)=%s"
-    params = [USER_ID, mes, ano]
+    where = "WHERE t.user_id=%s"
+    params = [USER_ID]
+
+    if not data_inicio and not data_fim:
+        where += " AND EXTRACT(MONTH FROM t.data_transacao)=%s AND EXTRACT(YEAR FROM t.data_transacao)=%s"
+        params += [mes, ano]
 
     if tipo in ("gasto", "renda"):
         where += " AND t.tipo=%s"
         params.append(tipo)
+
+    if busca:
+        where += " AND LOWER(t.descricao) LIKE LOWER(%s)"
+        params.append(f"%{busca}%")
+
+    if categoria_id:
+        where += " AND t.categoria_id=%s"
+        params.append(categoria_id)
+
+    if banco_id:
+        where += " AND t.banco_id=%s"
+        params.append(banco_id)
+
+    if data_inicio:
+        where += " AND t.data_transacao>=%s"
+        params.append(data_inicio)
+
+    if data_fim:
+        where += " AND t.data_transacao<=%s"
+        params.append(data_fim)
 
     rows = _fetch(
         f"""SELECT t.id, t.tipo, t.valor, t.descricao, t.pagamento, t.data_transacao,
@@ -231,13 +293,69 @@ async def transacoes(
         9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
     }
 
+    categorias = _fetch("SELECT id, nome, emoji FROM categorias ORDER BY nome")
+    bancos = _fetch("SELECT id, nome FROM bancos ORDER BY nome")
+
     return templates.TemplateResponse(request, "transacoes.html", {
         "rows": rows,
         "mes": mes,
         "ano": ano,
         "mes_nome": meses_map.get(mes, ""),
         "tipo_filtro": tipo,
+        "busca": busca,
+        "categoria_id": categoria_id,
+        "banco_id": banco_id,
+        "data_inicio": data_inicio,
+        "data_fim": data_fim,
+        "categorias": categorias,
+        "bancos": bancos,
     })
+
+
+@app.get("/transacoes/{transacao_id}/editar", response_class=HTMLResponse)
+async def editar_transacao_form(request: Request, transacao_id: int):
+    tx = _fetch_one(
+        """SELECT t.id, t.tipo, t.valor, t.descricao, t.pagamento, t.data_transacao,
+                  t.categoria_id, t.banco_id, t.parcelas
+           FROM transacoes t WHERE t.id=%s AND t.user_id=%s""",
+        (transacao_id, USER_ID)
+    )
+    if not tx:
+        return HTMLResponse("Transação não encontrada", status_code=404)
+
+    categorias = _fetch("SELECT id, nome, emoji FROM categorias ORDER BY nome")
+    bancos = _fetch("SELECT id, nome FROM bancos ORDER BY nome")
+
+    return templates.TemplateResponse(request, "editar_transacao.html", {
+        "tx": {
+            "id": tx[0], "tipo": tx[1], "valor": float(tx[2]),
+            "descricao": tx[3], "pagamento": tx[4], "data": tx[5],
+            "categoria_id": tx[6], "banco_id": tx[7], "parcelas": tx[8] or 1,
+        },
+        "categorias": categorias,
+        "bancos": bancos,
+    })
+
+
+@app.post("/transacoes/{transacao_id}/editar")
+async def editar_transacao(
+    transacao_id: int,
+    tipo: str = Form(...),
+    valor: float = Form(...),
+    descricao: str = Form(default=""),
+    pagamento: str = Form(default="debito"),
+    categoria_id: int = Form(default=None),
+    banco_id: int = Form(default=None),
+    parcelas: int = Form(default=1),
+):
+    _execute(
+        """UPDATE transacoes SET tipo=%s, valor=%s, descricao=%s, pagamento=%s,
+           categoria_id=%s, banco_id=%s, parcelas=%s
+           WHERE id=%s AND user_id=%s""",
+        (tipo, valor, descricao, pagamento, categoria_id or None,
+         banco_id or None, parcelas, transacao_id, USER_ID)
+    )
+    return RedirectResponse("/transacoes", status_code=303)
 
 
 @app.post("/transacoes/{transacao_id}/deletar")
@@ -359,6 +477,36 @@ async def deletar_meta(meta_id: int, mes: int = Query(default=7), ano: int = Que
     return RedirectResponse(f"/metas?mes={mes}&ano={ano}", status_code=303)
 
 
+@app.post("/fixos/gerar")
+async def gerar_fixos():
+    hoje = date.today()
+    fixos = _fetch(
+        "SELECT id, tipo, valor, descricao, pagamento, categoria_id, banco_id, parcelas, dia FROM fixos WHERE ativo=true AND user_id=%s",
+        (USER_ID,)
+    )
+    count = 0
+    for f in fixos:
+        fixo_id, tipo, valor, descricao, pagamento, cat_id, banco_id, parcelas, dia = f
+        data_transacao = hoje.replace(day=min(dia, 28))
+
+        ja_existe = _fetch_one(
+            "SELECT id FROM transacoes WHERE fixo_origin_id=%s AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
+            (fixo_id, USER_ID, hoje.month, hoje.year)
+        )
+        if ja_existe:
+            continue
+
+        _insert(
+            """INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, categoria_id, banco_id, parcelas, data_transacao, fixo_origin_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (tipo, valor, descricao, pagamento, USER_ID, cat_id, banco_id, parcelas, data_transacao, fixo_id)
+        )
+        count += 1
+    if count > 0:
+        return RedirectResponse(f"/fixos?gerados={count}", status_code=303)
+    return RedirectResponse("/fixos", status_code=303)
+
+
 @app.get("/fixos", response_class=HTMLResponse)
 async def fixos_page(request: Request):
     fixos = _fetch(
@@ -424,6 +572,29 @@ async def api_gastos_por_categoria(mes: int, ano: int):
         (USER_ID, mes, ano)
     )
     return {"labels": [r[0] for r in rows], "values": [float(r[1]) for r in rows]}
+
+
+@app.get("/api/evolucao_patrimonio")
+async def api_evolucao_patrimonio():
+    rows = _fetch(
+        """SELECT EXTRACT(YEAR FROM data_transacao)::int, EXTRACT(MONTH FROM data_transacao)::int,
+                  COALESCE(SUM(CASE WHEN tipo='renda' THEN valor ELSE 0 END),0) as rendas,
+                  COALESCE(SUM(CASE WHEN tipo='gasto' THEN valor ELSE 0 END),0) as gastos
+           FROM transacoes
+           WHERE user_id=%s
+           GROUP BY EXTRACT(YEAR FROM data_transacao), EXTRACT(MONTH FROM data_transacao)
+           ORDER BY 1, 2""",
+        (USER_ID,)
+    )
+    cumulative = 0
+    labels = []
+    values = []
+    meses_curtos = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    for ano, mes, rendas, gastos in rows:
+        cumulative += float(rendas) - float(gastos)
+        labels.append(f"{meses_curtos[mes-1]}/{ano}")
+        values.append(round(cumulative, 2))
+    return {"labels": labels, "values": values}
 
 
 @app.get("/api/gastos_por_dia")

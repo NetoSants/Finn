@@ -97,3 +97,6 @@ CREATE TABLE IF NOT EXISTS fixos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_fixos_user_id ON fixos(user_id);
+
+-- Referencia para geracao automatica de lancamentos a partir de fixos
+ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS fixo_origin_id INTEGER REFERENCES fixos(id) ON DELETE SET NULL;
