@@ -23,6 +23,7 @@ services:
         condition: service_healthy
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
+      ALLOWED_USER_IDS: ${ALLOWED_USER_IDS}
       DB_HOST: db
       DB_PORT: "5432"
       DB_NAME: finn
@@ -45,7 +46,7 @@ services:
       DB_NAME: finn
       DB_USER: finn
       DB_PASSWORD: finn
-      ALLOWED_USER_IDS: "1401845586"
+      ALLOWED_USER_IDS: ${ALLOWED_USER_IDS}
       TZ: "America/Sao_Paulo"
 
 volumes:
