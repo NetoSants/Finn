@@ -84,11 +84,11 @@ async def gasto_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg_id = context.user_data.get('gasto_msg_id')
         chat_id = update.message.chat_id
 
-            if msg_id:
-                await _edit(msg_id, chat_id, context,
-                            f"{_header(valor)}\n\nQual a descricao?")
-            else:
-                msg = await update.message.reply_text(f"{_header(valor)}\n\nQual a descricao?")
+        if msg_id:
+            await _edit(msg_id, chat_id, context,
+                        f"{_header(valor)}\n\nQual a descricao?")
+        else:
+            msg = await update.message.reply_text(f"{_header(valor)}\n\nQual a descricao?")
             context.user_data['gasto_msg_id'] = msg.message_id
 
         await update.message.delete()
