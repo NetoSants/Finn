@@ -123,11 +123,11 @@ async def gasto_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _edit(msg_id, chat_id, context,
                         f"{_header(valor, descricao)}\n\nSelecione a categoria:",
                         reply_markup=InlineKeyboardMarkup(keyboard))
-            else:
-                msg = await update.message.reply_text(
-                    f"{_header(valor, descricao)}\n\nSelecione a categoria:",
-                    reply_markup=InlineKeyboardMarkup(keyboard),
-                )
+        else:
+            msg = await update.message.reply_text(
+                f"{_header(valor, descricao)}\n\nSelecione a categoria:",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
             context.user_data['gasto_msg_id'] = msg.message_id
 
         await update.message.delete()
