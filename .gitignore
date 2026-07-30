@@ -6,7 +6,8 @@ Finn.md
 planilha_financeira.xlsx
 # Sensitive/env files
 .env
-.env.*
+.env.local
+.env.prod
 # Python cache
 __pycache__/
 *.pyc

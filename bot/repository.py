@@ -55,10 +55,10 @@ def _insert(query, params=None):
 
 # --- Transacoes ---
 
-def inserir_transacao(tipo, valor, descricao, pagamento, user_id, username, categoria_id=None):
+def inserir_transacao(tipo, valor, descricao, pagamento, user_id, username, categoria_id=None, banco_id=None, parcelas=1):
     return _insert(
-        "INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, username, categoria_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (tipo, valor, descricao, pagamento, user_id, username, categoria_id)
+        "INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, username, categoria_id, banco_id, parcelas) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        (tipo, valor, descricao, pagamento, user_id, username, categoria_id, banco_id, parcelas)
     )
 
 
@@ -76,6 +76,31 @@ def listar_transacoes(user_id, limite=20):
            LEFT JOIN categorias c ON c.id = t.categoria_id
            WHERE t.user_id = %s ORDER BY t.created_at DESC LIMIT %s""",
         (user_id, limite)
+    )
+
+
+def listar_transacoes_periodo(user_id, mes, ano, limite=50):
+    return _fetch(
+        """SELECT t.tipo, t.valor, t.descricao, t.pagamento, t.data_transacao, c.nome, c.emoji
+           FROM transacoes t
+           LEFT JOIN categorias c ON c.id = t.categoria_id
+           WHERE t.user_id = %s
+               AND EXTRACT(MONTH FROM t.data_transacao) = %s
+               AND EXTRACT(YEAR FROM t.data_transacao) = %s
+           ORDER BY t.created_at DESC LIMIT %s""",
+        (user_id, mes, ano, limite)
+    )
+
+
+def listar_transacoes_csv(user_id):
+    return _fetch(
+        """SELECT t.tipo, t.valor, t.descricao, t.pagamento, t.data_transacao,
+                  c.nome, c.emoji, t.created_at
+           FROM transacoes t
+           LEFT JOIN categorias c ON c.id = t.categoria_id
+           WHERE t.user_id = %s
+           ORDER BY t.created_at DESC""",
+        (user_id,)
     )
 
 
@@ -98,6 +123,20 @@ def contar_transacoes(user_id):
         "SELECT COUNT(*) FROM transacoes WHERE user_id = %s",
         (user_id,)
     )[0]
+
+
+def gastos_hoje(user_id):
+    return _fetch_one(
+        "SELECT COALESCE(SUM(valor), 0) FROM transacoes WHERE tipo = 'gasto' AND user_id = %s AND data_transacao = CURRENT_DATE",
+        (user_id,)
+    )[0]
+
+
+def buscar_categoria_por_id(cat_id):
+    return _fetch_one(
+        "SELECT id, nome, emoji FROM categorias WHERE id = %s",
+        (cat_id,)
+    )
 
 
 # --- Categorias ---
@@ -171,6 +210,47 @@ def gasto_por_categoria(user_id, mes, ano):
     )
 
 
+def total_gastos_periodo(user_id, mes, ano):
+    return _fetch_one(
+        """SELECT COALESCE(SUM(valor), 0) FROM transacoes
+           WHERE tipo = 'gasto' AND user_id = %s
+               AND EXTRACT(MONTH FROM data_transacao) = %s
+               AND EXTRACT(YEAR FROM data_transacao) = %s""",
+        (user_id, mes, ano)
+    )[0]
+
+
+def total_rendas_periodo(user_id, mes, ano):
+    return _fetch_one(
+        """SELECT COALESCE(SUM(valor), 0) FROM transacoes
+           WHERE tipo = 'renda' AND user_id = %s
+               AND EXTRACT(MONTH FROM data_transacao) = %s
+               AND EXTRACT(YEAR FROM data_transacao) = %s""",
+        (user_id, mes, ano)
+    )[0]
+
+
+def maior_gasto(user_id, mes, ano):
+    return _fetch_one(
+        """SELECT valor, descricao, data_transacao FROM transacoes
+           WHERE tipo = 'gasto' AND user_id = %s
+               AND EXTRACT(MONTH FROM data_transacao) = %s
+               AND EXTRACT(YEAR FROM data_transacao) = %s
+           ORDER BY valor DESC LIMIT 1""",
+        (user_id, mes, ano)
+    )
+
+
+def dias_com_gastos(user_id, mes, ano):
+    return _fetch_one(
+        """SELECT COUNT(DISTINCT data_transacao) FROM transacoes
+           WHERE tipo = 'gasto' AND user_id = %s
+               AND EXTRACT(MONTH FROM data_transacao) = %s
+               AND EXTRACT(YEAR FROM data_transacao) = %s""",
+        (user_id, mes, ano)
+    )[0]
+
+
 # --- Bancos ---
 
 def inserir_banco(nome, dia_fechamento, limite):
@@ -205,4 +285,44 @@ def listar_parcelas(user_id):
     return _fetch(
         "SELECT id, descricao, valor_total, valor_parcela, numero_parcelas, numero_parcela_atual, pago, data_primeira_parcela FROM parcelas WHERE user_id = %s ORDER BY data_primeira_parcela",
         (user_id,)
+    )
+
+
+# --- Fixos ---
+
+def inserir_fixo(tipo, valor, descricao, pagamento, user_id, categoria_id=None, banco_id=None, parcelas=1, dia=1):
+    return _insert(
+        "INSERT INTO fixos (tipo, valor, descricao, pagamento, user_id, categoria_id, banco_id, parcelas, dia) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        (tipo, valor, descricao, pagamento, user_id, categoria_id, banco_id, parcelas, dia)
+    )
+
+
+def remover_fixo(fixo_id, user_id):
+    return _execute("DELETE FROM fixos WHERE id = %s AND user_id = %s", (fixo_id, user_id))
+
+
+def listar_fixos(user_id):
+    return _fetch(
+        """SELECT f.id, f.tipo, f.valor, f.descricao, f.pagamento, f.parcelas, f.dia, f.ativo,
+                  c.nome, c.emoji, b.nome
+           FROM fixos f
+           LEFT JOIN categorias c ON c.id = f.categoria_id
+           LEFT JOIN bancos b ON b.id = f.banco_id
+           WHERE f.user_id = %s
+           ORDER BY f.tipo, f.dia""",
+        (user_id,)
+    )
+
+
+def buscar_fixo(fixo_id, user_id):
+    return _fetch_one(
+        "SELECT id, tipo, valor, descricao, pagamento, categoria_id, banco_id, parcelas, dia, ativo FROM fixos WHERE id = %s AND user_id = %s",
+        (fixo_id, user_id)
+    )
+
+
+def toggle_fixo(fixo_id, user_id):
+    return _execute(
+        "UPDATE fixos SET ativo = NOT ativo WHERE id = %s AND user_id = %s",
+        (fixo_id, user_id)
     )

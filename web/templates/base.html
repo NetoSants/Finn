@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finn - {% block title %}Financeiro{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['DM Sans', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        surface: {
+                            0: 'var(--surface-0)',
+                            1: 'var(--surface-1)',
+                            2: 'var(--surface-2)',
+                        },
+                        accent: {
+                            DEFAULT: 'var(--accent)',
+                            hover: 'var(--accent-hover)',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        :root {
+            --surface-0: #f8f9fa;
+            --surface-1: #ffffff;
+            --surface-2: #f1f3f5;
+            --text-primary: #1a1b1e;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent: #22c55e;
+            --accent-hover: #16a34a;
+            --accent-soft: rgba(34,197,94,0.1);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(0,0,0,0.06);
+            --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.03);
+            --sidebar-bg: #ffffff;
+            --sidebar-hover: #f3f4f6;
+            --sidebar-active: rgba(34,197,94,0.08);
+            --input-bg: #ffffff;
+            --input-border: #e5e7eb;
+            --badge-gasto-bg: rgba(239,68,68,0.1);
+            --badge-gasto-text: #ef4444;
+            --badge-renda-bg: rgba(34,197,94,0.1);
+            --badge-renda-text: #22c55e;
+        }
+        .dark {
+            --surface-0: #0f1117;
+            --surface-1: #1a1d27;
+            --surface-2: #232733;
+            --text-primary: #f1f3f5;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent: #4ade80;
+            --accent-hover: #22c55e;
+            --accent-soft: rgba(74,222,128,0.1);
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --border: rgba(255,255,255,0.06);
+            --shadow: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+            --sidebar-bg: #1a1d27;
+            --sidebar-hover: #232733;
+            --sidebar-active: rgba(74,222,128,0.1);
+            --input-bg: #232733;
+            --input-border: #2e3345;
+            --badge-gasto-bg: rgba(248,113,113,0.15);
+            --badge-gasto-text: #f87171;
+            --badge-renda-bg: rgba(74,222,128,0.15);
+            --badge-renda-text: #4ade80;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--surface-0);
+            color: var(--text-primary);
+        }
+        .card {
+            background: var(--surface-1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+        .stat-card {
+            background: var(--surface-1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .input-field {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            width: 100%;
+            transition: border-color 0.15s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: background 0.15s;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .badge-gasto {
+            background: var(--badge-gasto-bg);
+            color: var(--badge-gasto-text);
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-renda {
+            background: var(--badge-renda-bg);
+            color: var(--badge-renda-text);
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        [data-sidebar] { transition: transform 0.25s ease; }
+        .sidebar-overlay { transition: opacity 0.25s ease; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="flex min-h-screen">
+        <!-- Sidebar Desktop -->
+        <aside class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-60 z-40" style="background:var(--sidebar-bg); border-right:1px solid var(--border);">
+            <div class="flex items-center gap-3 px-5 h-16 shrink-0">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:var(--accent-soft);">
+                    <span class="text-lg">💰</span>
+                </div>
+                <span class="font-display text-xl font-bold" style="color:var(--text-primary);">Finn</span>
+            </div>
+            <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+                <a href="/" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/">
+                    <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/transacoes" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/transacoes">
+                    <i data-lucide="arrow-left-right" class="w-[18px] h-[18px]"></i>
+                    <span>Transações</span>
+                </a>
+                <a href="/categorias" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/categorias">
+                    <i data-lucide="tag" class="w-[18px] h-[18px]"></i>
+                    <span>Categorias</span>
+                </a>
+                <a href="/bancos" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/bancos">
+                    <i data-lucide="landmark" class="w-[18px] h-[18px]"></i>
+                    <span>Bancos</span>
+                </a>
+                <a href="/fixos" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/fixos">
+                    <i data-lucide="repeat" class="w-[18px] h-[18px]"></i>
+                    <span>Fixos</span>
+                </a>
+                <a href="/metas" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/metas">
+                    <i data-lucide="target" class="w-[18px] h-[18px]"></i>
+                    <span>Metas</span>
+                </a>
+            </nav>
+            <div class="px-3 py-3 border-t" style="border-color:var(--border);">
+                <button onclick="toggleTheme()" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium w-full transition hover:opacity-80" style="color:var(--text-secondary);">
+                    <i data-lucide="sun-moon" class="w-[18px] h-[18px]"></i>
+                    <span id="theme-label">Dark mode</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <div class="lg:hidden fixed top-0 inset-x-0 z-50 h-14 flex items-center px-4" style="background:var(--sidebar-bg); border-bottom:1px solid var(--border);">
+            <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-primary);">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-2 ml-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--accent-soft);">
+                    <span class="text-sm">💰</span>
+                </div>
+                <span class="font-display text-lg font-bold" style="color:var(--text-primary);">Finn</span>
+            </div>
+            <div class="ml-auto">
+                <button onclick="toggleTheme()" class="p-2 rounded-lg" style="color:var(--text-secondary);">
+                    <i data-lucide="sun-moon" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay lg:hidden fixed inset-0 z-50 bg-black/40 hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Mobile Sidebar Drawer -->
+        <div id="sidebar-drawer" data-sidebar class="lg:hidden fixed inset-y-0 left-0 w-64 z-50 -translate-x-full" style="background:var(--sidebar-bg); border-right:1px solid var(--border);">
+            <div class="flex items-center gap-3 px-5 h-14">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--accent-soft);">
+                    <span class="text-sm">💰</span>
+                </div>
+                <span class="font-display text-lg font-bold" style="color:var(--text-primary);">Finn</span>
+            </div>
+            <nav class="px-3 py-2 space-y-1">
+                <a href="/" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/">
+                    <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i><span>Dashboard</span>
+                </a>
+                <a href="/transacoes" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/transacoes">
+                    <i data-lucide="arrow-left-right" class="w-[18px] h-[18px]"></i><span>Transações</span>
+                </a>
+                <a href="/categorias" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/categorias">
+                    <i data-lucide="tag" class="w-[18px] h-[18px]"></i><span>Categorias</span>
+                </a>
+                <a href="/bancos" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/bancos">
+                    <i data-lucide="landmark" class="w-[18px] h-[18px]"></i><span>Bancos</span>
+                </a>
+                <a href="/fixos" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/fixos">
+                    <i data-lucide="repeat" class="w-[18px] h-[18px]"></i><span>Fixos</span>
+                </a>
+                <a href="/metas" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition" data-page="/metas">
+                    <i data-lucide="target" class="w-[18px] h-[18px]"></i><span>Metas</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 lg:ml-60 pt-14 lg:pt-0 min-h-screen" style="background:var(--surface-0);">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function getTheme() { return localStorage.getItem('finn-theme') || 'dark'; }
+        function applyTheme(t) {
+            document.documentElement.classList.toggle('dark', t === 'dark');
+            document.getElementById('theme-label').textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+            localStorage.setItem('finn-theme', t);
+        }
+        function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
+        applyTheme(getTheme());
+
+        function toggleSidebar() {
+            const d = document.getElementById('sidebar-drawer');
+            const o = document.getElementById('sidebar-overlay');
+            const open = d.classList.contains('translate-x-0');
+            d.classList.toggle('translate-x-0', !open);
+            d.classList.toggle('-translate-x-full', open);
+            o.classList.toggle('hidden', open);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            const path = window.location.pathname.replace(/\/$/, '') || '/';
+            document.querySelectorAll('.sidebar-link').forEach(a => {
+                const page = a.getAttribute('data-page');
+                const active = page === '/' ? path === '/' : path.startsWith(page);
+                a.style.background = active ? 'var(--sidebar-active)' : 'transparent';
+                a.style.color = active ? 'var(--accent)' : 'var(--text-secondary)';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,23 +1,24 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    texto = (
+        "💰 Finn\n"
+        "Seu assistente financeiro pessoal."
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("💰 Gasto", callback_data="menu_gasto"),
+         InlineKeyboardButton("💵 Renda", callback_data="menu_renda")],
+        [InlineKeyboardButton("📋 Extrato", callback_data="menu_extrato"),
+         InlineKeyboardButton("💳 Saldo", callback_data="menu_saldo")],
+         [InlineKeyboardButton("🏦 Bancos", callback_data="bancos_menu"),
+         InlineKeyboardButton("📊 Metas", callback_data="menu_metas")],
+        [InlineKeyboardButton("❓ Ajuda", callback_data="menu_ajuda")],
+    ]
+
     await update.message.reply_text(
-        "Ola! Eu sou o **Finn**, seu assistente financeiro via Telegram.\n\n"
-        "**O que eu faco?**\n"
-        "Gerencio seus gastos, rendas, bancos e parcelas.\n\n"
-        "**Comandos disponiveis:**\n"
-        "/gasto [valor] [descricao] - Registra um gasto\n"
-        "/renda [valor] [descricao] - Registra uma renda\n"
-        "/saldo - Consulta saldo\n"
-        "/extrato - Mostra extrato\n"
-        "/bancos - Lista bancos cadastrados\n"
-        "/cadastrar_banco [nome] [venc] [limite] - Cadastra um banco\n"
-        "/remover_banco [nome] - Remove um banco\n"
-        "/parcelas - Lista parcelas\n"
-        "/parcelar [valor] [parc] [dia] [desc] - Cadastra parcela\n"
-        "/help - Mostra esta ajuda\n"
-        "/ping - Status do bot",
-        parse_mode="Markdown"
+        texto,
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )

@@ -21,8 +21,6 @@ BOT_TOKEN=<token>
 DB_HOST=localhost            # use "db" when running inside Docker
 DB_PORT=5432 / DB_NAME=finn / DB_USER=finn / DB_PASSWORD=finn
 ALLOWED_USER_IDS=1401845586  # comma-separated Telegram user IDs
-OLLAMA_HOST=http://localhost:11434  # use "http://ollama:11434" in Docker
-OLLAMA_MODEL=qwen2.5:0.5b
 ```
 
 `bot/config.py` calls `load_dotenv()` at import time.
@@ -34,27 +32,15 @@ OLLAMA_MODEL=qwen2.5:0.5b
 - **DB**: `psycopg2.pool.SimpleConnectionPool` (1-10) via `bot/database.py`
   - `database.py` reads env vars via `os.getenv()` **independently** from `config.py` — changes in one don't affect the other
   - All query helpers live in `bot/repository.py`
-- **AI**: Ollama integration via `bot/ai.py`
-  - Interprets informal messages (e.g., "gastei 50 no almoço")
-  - Returns structured JSON for confirmation before saving
-  - Model: `qwen2.5:0.5b` (lightweight, runs on CPU)
-
-## AI
-
-- **Ollama** integration via `bot/ai.py`
-- Interprets informal messages (e.g., "gastei 50 no almoço")
-- Returns structured JSON for confirmation before saving
-- Model: `qwen2.5:0.5b` (lightweight, runs on CPU)
-- **Pre-filter**: checks for financial keywords before calling Ollama to avoid wasting time on non-financial messages
-- **Accuracy**: 85.7% (36/42 tests) — see `test_completo.py` for full test suite
-- Known weak spots: model sometimes confuses gasto/renda for informal phrasing ("torrei 200", "paguei de credito na amazon")
+- **Web**: FastAPI + Jinja2 templates via `web/app.py` (port 8000)
+  - Dashboard with charts, heatmap, faturas, CRUD for all entities
 
 ## Gotchas
 
-- **Callback handlers bypass auth**: `CALLBACKS` in `main.py:42-43` are registered **without** the `restricted` wrapper. Only `COMMANDS` dict entries and the catch-all `MessageHandler` are protected. This means any Telegram user can trigger `gasto_callback` / `bancos_callback` if they guess the callback data.
-- **`ping` is undocumented**: present in `COMMANDS` dict but missing from the `BotCommand` list in `post_init()` — won't appear in Telegram's bot menu.
+- **Callback handlers bypass auth**: `CALLBACKS` in `main.py` are registered **without** the `restricted` wrapper. Only `COMMANDS` dict entries and the catch-all `MessageHandler` are protected. This means any Telegram user can trigger `gasto_callback` / `bancos_callback` if they guess the callback data.
 - **`repository.py` commit behavior varies**: `_fetch` does NOT commit (read-only). `_fetch_one`, `_execute`, and `_insert` all call `commit()` (and `rollback()` on error). New query helpers should follow the same pattern.
 - **No tests, linting, or typechecking** are configured.
+- **Starlette 1.x TemplateResponse API**: `request` is first positional arg, NOT in context dict.
 
 ## Adding a command
 

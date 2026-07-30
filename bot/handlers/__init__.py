@@ -1,17 +1,19 @@
 from .start import start
 from .help import help_command
 from .gasto import gasto, gasto_callback
-from .renda import renda
+from .renda import renda, renda_text
 from .saldo import saldo
 from .extrato import extrato
 from .ping import ping
-from .bancos import bancos, bancos_callback
-from .cadastrar_banco import cadastrar_banco
-from .remover_banco import remover_banco
+from .bancos import bancos, bancos_callback, banco_text
 from .parcelas import parcelas, parcelar
 from .meta import meta
 from .categorias import categorias
-from .generic import ai_confirmar_callback, ai_cancelar_callback, pag_callback
+
+from .menu import menu_callback
+from .ajuda import ajuda_callback
+from .resumo import resumo
+from .exportar import exportar
 
 COMMANDS = {
     "start": start,
@@ -22,18 +24,17 @@ COMMANDS = {
     "extrato": extrato,
     "ping": ping,
     "bancos": bancos,
-    "cadastrar_banco": cadastrar_banco,
-    "remover_banco": remover_banco,
     "parcelas": parcelas,
     "parcelar": parcelar,
     "meta": meta,
     "categorias": categorias,
+    "resumo": resumo,
+    "exportar": exportar,
 }
 
 CALLBACKS = [
+    ("^menu_", menu_callback),
+    ("^ajuda_", ajuda_callback),
     ("^gasto_", gasto_callback),
     ("^bancos_", bancos_callback),
-    ("^pag_", pag_callback),
-    ("^ai_confirmar$", ai_confirmar_callback),
-    ("^ai_cancelar$", ai_cancelar_callback),
 ]

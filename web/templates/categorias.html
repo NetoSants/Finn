@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Categorias{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Categorias</h1>
+</div>
+
+<div class="card mb-6">
+    <h2 class="font-display text-base font-semibold mb-4" style="color:var(--text-primary);">Nova categoria</h2>
+    <form method="post" action="/categorias/criar" class="flex gap-3">
+        <input type="text" name="emoji" placeholder="😀" maxlength="2" class="input-field w-20 text-center">
+        <input type="text" name="nome" placeholder="Nome da categoria" required class="input-field flex-1">
+        <button type="submit" class="btn-primary">Adicionar</button>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for id, nome, emoji, total_registros, total_valor in categorias %}
+    <div class="card group relative flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background:var(--surface-2);">
+            {{ emoji or '📦' }}
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm" style="color:var(--text-primary);">{{ nome }}</p>
+            <p class="text-xs" style="color:var(--text-muted);">{{ total_registros }} transações</p>
+        </div>
+        <div class="text-right shrink-0">
+            <p class="text-sm font-semibold" style="color:var(--text-primary);">R$ {{ total_valor|fmt }}</p>
+            {% if total_registros == 0 %}
+            <form method="post" action="/categorias/{{ id }}/deletar" onsubmit="return confirm('Deletar esta categoria?')" class="opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                <button type="submit" class="text-xs" style="color:var(--danger);">Remover</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not categorias %}
+    <div class="col-span-full text-center py-12">
+        <i data-lucide="tag" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted);"></i>
+        <p class="text-lg" style="color:var(--text-muted);">Nenhuma categoria</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

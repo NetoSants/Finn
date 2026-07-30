@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+    <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Dashboard</h1>
+    <p class="text-sm mt-1" style="color:var(--text-secondary);">{{ mes_nome }} {{ ano }}</p>
+</div>
+
+<div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-8 scrollbar-hide">
+    <div class="flex gap-2 sm:grid sm:grid-cols-12 sm:gap-2 min-w-max sm:min-w-0">
+        {% set meses_short = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'] %}
+        {% for m in range(1, 13) %}
+        <a href="/?mes={{ m }}&ano={{ ano }}"
+           class="flex-shrink-0 w-16 sm:w-auto px-4 py-3 rounded-xl text-sm font-semibold text-center transition no-underline
+                  {% if m == mes %}text-black{% else %}hover:opacity-80{% endif %}"
+           style="{% if m == mes %}background:var(--accent);{% else %}background:var(--surface-1); color:var(--text-secondary);{% endif %}">
+            {{ meses_short[m - 1] }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
+        <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="wallet" class="w-4 h-4" style="color:var(--accent);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Saldo</span>
+        </div>
+        <p class="text-2xl font-bold font-display" style="color: {% if saldo >= 0 %}var(--accent){% else %}var(--danger){% endif %};">R$ {{ saldo|fmt }}</p>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
+        <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="trending-down" class="w-4 h-4" style="color:var(--danger);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Gastos</span>
+        </div>
+        <p class="text-2xl font-bold font-display" style="color:var(--danger);">R$ {{ total_gastos|fmt }}</p>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
+        <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="trending-up" class="w-4 h-4" style="color:var(--accent);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Rendas</span>
+        </div>
+        <p class="text-2xl font-bold font-display" style="color:var(--accent);">R$ {{ total_rendas|fmt }}</p>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2));">
+        <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="calendar" class="w-4 h-4" style="color:var(--warning);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Hoje</span>
+        </div>
+        <p class="text-2xl font-bold font-display" style="color:var(--warning);">R$ {{ gastos_hoje|fmt }}</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="stat-card">
+        <div class="flex items-center gap-2 mb-1">
+            <i data-lucide="bar-chart-2" class="w-4 h-4" style="color:var(--text-muted);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Média diária</span>
+        </div>
+        <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">R$ {{ "%.2f"|format(media_diaria) }}</p>
+    </div>
+    <div class="stat-card">
+        <div class="flex items-center gap-2 mb-1">
+            <i data-lucide="trophy" class="w-4 h-4" style="color:var(--warning);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Maior gasto</span>
+        </div>
+        {% if maior_gasto %}
+        <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">R$ {{ maior_gasto[0]|fmt }}</p>
+        <p class="text-sm truncate" style="color:var(--text-muted);">{{ maior_gasto[1] }}</p>
+        {% else %}
+        <p class="text-xl font-semibold" style="color:var(--text-muted);">-</p>
+        {% endif %}
+    </div>
+    <div class="stat-card">
+        <div class="flex items-center gap-2 mb-1">
+            <i data-lucide="file-text" class="w-4 h-4" style="color:var(--text-muted);"></i>
+            <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-muted);">Transações</span>
+        </div>
+        <p class="text-xl font-semibold font-display" style="color:var(--text-primary);">{{ total_transacoes }}</p>
+    </div>
+</div>
+
+{% if faturas %}
+<div class="mb-8">
+    <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Faturas em Aberto</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for banco_nome, total_fatura, dia_fech, limite_fatura in faturas %}
+        {% set cor_fatura = '#ef4444' if limite_fatura and total_fatura > limite_fatura else ('#f59e0b' if limite_fatura and total_fatura > limite_fatura * 0.8 else '#22c55e') %}
+        <div class="card relative overflow-hidden" style="background: linear-gradient(135deg, {{ cor_fatura }}22, var(--surface-1));">
+            <div class="absolute top-0 right-0 w-20 h-20 rounded-bl-full" style="background:{{ cor_fatura }}15;"></div>
+            <div class="relative">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="credit-card" class="w-5 h-5" style="color:{{ cor_fatura }};"></i>
+                    <h3 class="font-semibold font-display" style="color:var(--text-primary);">{{ banco_nome }}</h3>
+                </div>
+                <p class="text-2xl font-bold font-display mb-1" style="color:{{ cor_fatura }};">R$ {{ total_fatura|fmt }}</p>
+                <p class="text-sm" style="color:var(--text-muted);">Fecha dia {{ dia_fech }}</p>
+                {% if limite_fatura > 0 %}
+                {% set pct_fatura = (total_fatura / limite_fatura * 100) %}
+                <div class="mt-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span style="color:var(--text-muted);">{{ "%.0f"|format(pct_fatura) }}% do limite</span>
+                        <span style="color:var(--text-muted);">R$ {{ (limite_fatura - total_fatura)|fmt }} disponível</span>
+                    </div>
+                    <div class="w-full rounded-full h-1.5" style="background:var(--surface-2);">
+                        <div class="h-1.5 rounded-full" style="width:{{ [pct_fatura, 100]|min }}%; background:{{ cor_fatura }};"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="card">
+        <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Gastos por categoria</h2>
+        {% if categorias %}
+        <div style="height:280px"><canvas id="chartCat"></canvas></div>
+        {% else %}
+        <p class="text-center py-8" style="color:var(--text-muted);">Nenhum gasto neste mês</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Gastos por dia</h2>
+        {% if total_gastos > 0 %}
+        <div style="height:280px"><canvas id="chartDia"></canvas></div>
+        {% else %}
+        <p class="text-center py-8" style="color:var(--text-muted);">Nenhum gasto neste mês</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if heatmap %}
+<div class="card mb-8">
+    <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Mapa de calor</h2>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Intensidade de gastos por dia do mês</p>
+    <div class="flex flex-wrap gap-1.5" id="heatmap-container">
+    </div>
+    <div class="flex items-center gap-3 mt-3">
+        <span class="text-xs" style="color:var(--text-muted);">Menos</span>
+        <div class="flex gap-1">
+            <div class="w-3 h-3 rounded-sm" style="background:var(--surface-2);"></div>
+            <div class="w-3 h-3 rounded-sm" style="background:#16a34a33;"></div>
+            <div class="w-3 h-3 rounded-sm" style="background:#16a34a66;"></div>
+            <div class="w-3 h-3 rounded-sm" style="background:#16a34a99;"></div>
+            <div class="w-3 h-3 rounded-sm" style="background:#22c55e;"></div>
+        </div>
+        <span class="text-xs" style="color:var(--text-muted);">Mais</span>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const heatmapData = {{ heatmap|tojson }};
+    const container = document.getElementById('heatmap-container');
+    const maxVal = Math.max(...heatmapData.map(h => h[1]), 1);
+    const daysInMonth = new Date({{ ano }}, {{ mes }}, 0).getDate();
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const entry = heatmapData.find(h => h[0] === d);
+        const val = entry ? entry[1] : 0;
+        const intensity = val === 0 ? 0 : Math.ceil((val / maxVal) * 4);
+        const colors = ['var(--surface-2)', '#16a34a33', '#16a34a66', '#16a34a99', '#22c55e'];
+        const el = document.createElement('div');
+        el.className = 'w-7 h-7 rounded-md flex items-center justify-center text-xs font-medium cursor-default';
+        el.style.background = colors[intensity];
+        el.style.color = intensity >= 3 ? '#fff' : 'var(--text-muted)';
+        el.title = d + '/' + {{ mes }} + ': R$ ' + val.toFixed(2);
+        el.textContent = d;
+        container.appendChild(el);
+    }
+});
+</script>
+{% endif %}
+
+{% if metas %}
+<div class="card mb-8">
+    <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Metas do mês</h2>
+    <div class="space-y-4">
+        {% for nome, emoji, limite, gasto in metas %}
+        {% set pct = (gasto / limite * 100) if limite > 0 else 0 %}
+        {% set pct_capped = [pct, 100]|min %}
+        {% set ring_color = '#ef4444' if pct > 100 else ('#f59e0b' if pct > 80 else '#22c55e') %}
+        {% set circumference = 113.1 %}
+        {% set offset = circumference - (pct_capped / 100 * circumference) %}
+        <div class="flex items-center gap-4">
+            <div class="relative w-16 h-16 shrink-0">
+                <svg class="w-16 h-16 -rotate-90" viewBox="0 0 40 40">
+                    <circle cx="20" cy="20" r="18" fill="none" stroke-width="3" style="stroke:var(--surface-2);"/>
+                    <circle cx="20" cy="20" r="18" fill="none" stroke-width="3" stroke-linecap="round"
+                            stroke="{{ ring_color }}" stroke-dasharray="{{ circumference }}"
+                            stroke-dashoffset="{{ offset }}"/>
+                </svg>
+                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold" style="color:{{ ring_color }};">{{ "%.0f"|format(pct) }}%</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-lg">{{ emoji }}</span>
+                    <span class="font-semibold text-sm" style="color:var(--text-primary);">{{ nome }}</span>
+                </div>
+                <p class="text-sm" style="color:var(--text-muted);">R$ {{ gasto|fmt }} / R$ {{ limite|fmt }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if ultimas %}
+<div class="card">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-lg font-semibold" style="color:var(--text-primary);">Últimas transações</h2>
+        <a href="/transacoes?mes={{ mes }}&ano={{ ano }}" class="text-sm font-medium" style="color:var(--accent);">Ver todas &rarr;</a>
+    </div>
+    <div class="space-y-2">
+        {% for tipo, valor, descricao, pagamento, data, cat_nome, cat_emoji, parcelas, banco_nome in ultimas %}
+        <div class="flex items-center gap-3 py-2.5 px-3 rounded-xl transition" style="background:var(--surface-0);">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:var(--surface-2);">
+                <span class="text-sm">{{ cat_emoji or '📦' }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate" style="color:var(--text-primary);">{{ descricao or '-' }}</p>
+                <p class="text-xs" style="color:var(--text-muted);">
+                    {{ data.strftime('%d/%m') if data else '-' }}
+                    {% if parcelas and parcelas > 1 %} &middot; {{ parcelas }}x{% endif %}
+                    {% if banco_nome %} &middot; {{ banco_nome }}{% endif %}
+                </p>
+            </div>
+            <span class="badge-{{ tipo }} shrink-0">{{ tipo }}</span>
+            <span class="text-sm font-semibold shrink-0" style="color:{% if tipo == 'gasto' %}var(--danger){% else %}var(--accent){% endif %};">
+                {% if tipo == 'gasto' %}-{% else %}+{% endif %} R$ {{ valor|fmt }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+
+    fetch('/api/gastos_por_categoria?mes={{ mes }}&ano={{ ano }}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.labels.length) return;
+            const colors = ['#4ade80','#f87171','#fbbf24','#60a5fa','#a78bfa','#f472b6','#2dd4bf','#fb923c','#818cf8'];
+            new Chart(document.getElementById('chartCat'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{ data: data.values, backgroundColor: colors.slice(0, data.labels.length), borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, font: { size: 12 }, color: textColor } } }
+                }
+            });
+        });
+
+    fetch('/api/gastos_por_dia?mes={{ mes }}&ano={{ ano }}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.labels.length) return;
+            new Chart(document.getElementById('chartDia'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels.map(d => d + '/' + '{{ mes }}'),
+                    datasets: [{ data: data.values, backgroundColor: '#4ade80', borderRadius: 6, barThickness: 12 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor } },
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }
+                    }
+                }
+            });
+        });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+});
+</script>
+{% endblock %}

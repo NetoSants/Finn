@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Fixos{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Fixos</h1>
+</div>
+
+<div class="card mb-6">
+    <h2 class="font-display text-base font-semibold mb-4" style="color:var(--text-primary);">Novo Fixo</h2>
+    <form method="post" action="/fixos/criar">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Tipo</label>
+                <select name="tipo" required class="input-field">
+                    <option value="gasto">Gasto</option>
+                    <option value="renda">Renda</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Valor (R$/mês)</label>
+                <input type="number" name="valor" step="0.01" min="0.01" required placeholder="0,00" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Descrição</label>
+                <input type="text" name="descricao" required placeholder="Ex: Aluguel" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Dia do mês</label>
+                <input type="number" name="dia" min="1" max="31" value="1" required class="input-field">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Pagamento</label>
+                <select name="pagamento" class="input-field">
+                    <option value="debito">Débito</option>
+                    <option value="credito">Crédito</option>
+                    <option value="pix">Pix</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Parcelas</label>
+                <input type="number" name="parcelas" min="1" max="12" value="1" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Categoria</label>
+                <select name="categoria_id" class="input-field">
+                    <option value="">Nenhuma</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat[0] }}">{{ cat[2] or '' }} {{ cat[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color:var(--text-muted);">Banco</label>
+                <select name="banco_id" class="input-field">
+                    <option value="">Nenhum</option>
+                    {% for b in bancos %}
+                    <option value="{{ b[0] }}">{{ b[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">Salvar</button>
+    </form>
+</div>
+
+{% if fixos %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for f in fixos %}
+    {% set fixo_id, tipo, valor, descricao, pagamento, parcelas, dia, ativo, cat_nome, cat_emoji, banco_nome = f %}
+    <div class="card relative group" style="{{ 'opacity:0.5;' if not ativo }}">
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <span class="badge-{{ tipo }}">{{ 'Gasto' if tipo == 'gasto' else 'Renda' }}</span>
+                {% if not ativo %}
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:var(--surface-2); color:var(--text-muted);">Inativo</span>
+                {% endif %}
+            </div>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <form method="post" action="/fixos/{{ fixo_id }}/toggle" class="inline">
+                    <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center" style="color:var(--text-muted);" title="Ativar/Desativar">
+                        <i data-lucide="{{ 'power' if ativo else 'power-off' }}" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+                <form method="post" action="/fixos/{{ fixo_id }}/deletar" class="inline" onsubmit="return confirm('Remover este fixo?')">
+                    <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center" style="color:var(--danger);" title="Remover">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="mb-3">
+            <p class="text-xl font-bold font-display" style="color:var(--text-primary);">R$ {{ valor|fmt }}/mês</p>
+            <p class="text-sm mt-1" style="color:var(--text-secondary);">{{ descricao }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs" style="color:var(--text-muted);">
+            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> Dia {{ dia }}</span>
+            {% if pagamento %}<span class="flex items-center gap-1"><i data-lucide="credit-card" class="w-3 h-3"></i> {{ pagamento }}</span>{% endif %}
+            {% if parcelas and parcelas > 1 %}<span class="flex items-center gap-1"><i data-lucide="layers" class="w-3 h-3"></i> {{ parcelas }}x</span>{% endif %}
+            {% if cat_nome %}<span class="flex items-center gap-1">{{ cat_emoji or '' }} {{ cat_nome }}</span>{% endif %}
+            {% if banco_nome %}<span class="flex items-center gap-1"><i data-lucide="landmark" class="w-3 h-3"></i> {{ banco_nome }}</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-12">
+    <i data-lucide="repeat" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted);"></i>
+    <p class="text-lg" style="color:var(--text-muted);">Nenhum fixo cadastrado</p>
+    <p class="text-sm mt-1" style="color:var(--text-muted);">Cadastre seus gastos e rendas recorrentes acima</p>
+</div>
+{% endif %}
+{% endblock %}

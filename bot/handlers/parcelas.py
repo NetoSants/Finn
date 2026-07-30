@@ -25,7 +25,7 @@ async def parcelas(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    msg = "**Parcelas:**\n\n"
+    msg = "Parcelas:\n\n"
     for row in rows:
         id_, desc, valor_total, valor_parc, num_parc, parc_atual, pago, data = row
         status = "OK" if pago else "  "
@@ -37,7 +37,7 @@ async def parcelas(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Nova Parcela", callback_data="parcelas_adicionar")]
     ]
 
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def parcelar(update: Update, context: ContextTypes.DEFAULT_TYPE):

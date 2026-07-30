@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Bancos{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="font-display text-2xl font-bold" style="color:var(--text-primary);">Bancos</h1>
+</div>
+
+<div class="card mb-6">
+    <h2 class="font-display text-base font-semibold mb-4" style="color:var(--text-primary);">Novo banco</h2>
+    <form method="post" action="/bancos/criar" class="flex gap-3 flex-wrap">
+        <input type="text" name="nome" placeholder="Nome do banco" required class="input-field flex-1 min-w-[200px]">
+        <input type="number" name="dia_fechamento" placeholder="Dia fechamento" min="1" max="31" required class="input-field w-40">
+        <input type="number" name="limite" placeholder="Limite" step="0.01" min="0" class="input-field w-40">
+        <button type="submit" class="btn-primary">Adicionar</button>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for id, nome, dia_fechamento, limite, total_gasto, total_transacoes in bancos %}
+    {% set pct_utilizado = (total_gasto / limite * 100) if limite > 0 else 0 %}
+    {% set cor_card = '#22c55e' if pct_utilizado <= 80 else ('#f59e0b' if pct_utilizado <= 100 else '#ef4444') %}
+
+    <div class="relative rounded-2xl overflow-hidden group" style="min-height:200px;">
+        <div class="absolute inset-0 rounded-2xl" style="background: linear-gradient(145deg, {{ cor_card }}40, {{ cor_card }}15, var(--surface-1));"></div>
+        <div class="relative p-5">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wider mb-1" style="color:var(--text-muted);">CARTÃO DE CRÉDITO</p>
+                    <h3 class="font-display text-lg font-bold" style="color:var(--text-primary);">{{ nome }}</h3>
+                </div>
+                <form method="post" action="/bancos/{{ id }}/deletar" onsubmit="return confirm('Deletar {{ nome }}?')" class="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--surface-1); color:var(--danger);" title="Deletar">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex items-center gap-2 mb-1">
+                <div class="w-8 h-5 rounded" style="background:linear-gradient(135deg, #fbbf24, #f59e0b);"></div>
+            </div>
+
+            <p class="text-xs mt-4 mb-3 font-mono tracking-widest" style="color:var(--text-muted);">
+                **** **** **** {{ "%04d"|format(id * 1234 % 10000) }}
+            </p>
+
+            {% if limite > 0 %}
+            <div class="mb-2">
+                <div class="w-full rounded-full h-1.5" style="background:var(--surface-2);">
+                    <div class="h-1.5 rounded-full" style="width:{{ [pct_utilizado, 100]|min }}%; background:{{ cor_card }};"></div>
+                </div>
+            </div>
+            <div class="flex justify-between text-xs">
+                <span style="color:var(--text-muted);">R$ {{ total_gasto|fmt }} / R$ {{ limite|fmt }}</span>
+                <span style="color:var(--cor_card, var(--text-muted));">{{ "%.0f"|format(pct_utilizado) }}%</span>
+            </div>
+            {% endif %}
+
+            <div class="flex justify-between items-center mt-4 pt-3" style="border-top:1px solid var(--border);">
+                <span class="text-xs" style="color:var(--text-muted);">Fecha dia {{ dia_fechamento }}</span>
+                <span class="text-xs" style="color:var(--text-muted);">{{ total_transacoes }} transações</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not bancos %}
+    <div class="col-span-full text-center py-12">
+        <i data-lucide="landmark" class="w-12 h-12 mx-auto mb-3" style="color:var(--text-muted);"></i>
+        <p class="text-lg" style="color:var(--text-muted);">Nenhum banco cadastrado</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

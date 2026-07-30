@@ -57,6 +57,27 @@ MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_transacoes_categoria ON transacoes(categoria_id);
     CREATE INDEX IF NOT EXISTS idx_metas_user_mes ON metas(user_id, mes, ano);
     """,
+    # Tabela fixos (gastos/rendas recorrentes)
+    """
+    CREATE TABLE IF NOT EXISTS fixos (
+        id SERIAL PRIMARY KEY,
+        tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('gasto', 'renda')),
+        valor DECIMAL(12,2) NOT NULL,
+        descricao VARCHAR(255) NOT NULL,
+        categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL,
+        pagamento VARCHAR(20) DEFAULT 'debito',
+        banco_id INTEGER REFERENCES bancos(id) ON DELETE SET NULL,
+        parcelas INTEGER DEFAULT 1,
+        dia INTEGER NOT NULL CHECK (dia >= 1 AND dia <= 31),
+        ativo BOOLEAN DEFAULT TRUE,
+        user_id BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """,
+    # Indices fixos
+    """
+    CREATE INDEX IF NOT EXISTS idx_fixos_user_id ON fixos(user_id);
+    """,
 ]
 
 

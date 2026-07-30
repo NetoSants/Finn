@@ -53,7 +53,11 @@ async def meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"   {barra}")
         lines.append("")
 
-    await update.message.reply_text("\n".join(lines))
+    keyboard = [[InlineKeyboardButton("◀ Voltar", callback_data="menu_voltar")]]
+    await update.message.reply_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 def _barra_progresso(pct):

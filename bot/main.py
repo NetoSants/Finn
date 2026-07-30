@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from telegram import Update, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters
@@ -18,20 +17,21 @@ async def post_init(application):
         BotCommand("gasto", "Registra um gasto"),
         BotCommand("renda", "Registra uma renda"),
         BotCommand("bancos", "Lista bancos cadastrados"),
-        BotCommand("cadastrar_banco", "Cadastra um banco"),
-        BotCommand("remover_banco", "Remove um banco"),
         BotCommand("saldo", "Consulta saldo"),
         BotCommand("extrato", "Mostra extrato"),
         BotCommand("parcelas", "Lista parcelas"),
         BotCommand("parcelar", "Cadastra parcela"),
         BotCommand("meta", "Define/consulta metas mensais"),
         BotCommand("categorias", "Lista categorias"),
+        BotCommand("resumo", "Resumo mensal com insights"),
+        BotCommand("exportar", "Exporta transacoes em CSV"),
+        BotCommand("ping", "Verifica se o bot esta online"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("Finn configured!")
 
 
-async def main():
+def main():
     run_migrations()
 
     application = (
@@ -58,6 +58,6 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        main()
     except (KeyboardInterrupt, RuntimeError):
         logger.info("Finn stopped!")
