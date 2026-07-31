@@ -40,7 +40,7 @@
 {% if metas %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for id, nome, emoji, limite, gasto in metas %}
-    {% set pct = (gasto / limite * 100) if limite > 0 else 0 %}
+    {% set pct = (gasto|float / limite|float * 100) if limite > 0 else 0 %}
     {% set pct_capped = [pct, 100]|min %}
     {% set ring_color = '#ef4444' if pct > 100 else ('#f59e0b' if pct > 80 else '#22c55e') %}
     {% set circumference = 138.2 %}

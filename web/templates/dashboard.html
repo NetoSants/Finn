@@ -123,7 +123,7 @@
     <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Faturas em Aberto</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for banco_nome, total_fatura, dia_fech, limite_fatura in faturas %}
-        {% set cor_fatura = '#ef4444' if limite_fatura and total_fatura > limite_fatura else ('#f59e0b' if limite_fatura and total_fatura > limite_fatura * 0.8 else '#22c55e') %}
+        {% set cor_fatura = '#ef4444' if limite_fatura and total_fatura > limite_fatura else ('#f59e0b' if limite_fatura and total_fatura > limite_fatura|float * 0.8 else '#22c55e') %}
         <div class="card relative overflow-hidden" style="background: linear-gradient(135deg, {{ cor_fatura }}22, var(--surface-1));">
             <div class="absolute top-0 right-0 w-20 h-20 rounded-bl-full" style="background:{{ cor_fatura }}15;"></div>
             <div class="relative">
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h2 class="font-display text-lg font-semibold mb-4" style="color:var(--text-primary);">Metas do mês</h2>
     <div class="space-y-4">
         {% for nome, emoji, limite, gasto in metas %}
-        {% set pct = (gasto / limite * 100) if limite > 0 else 0 %}
+        {% set pct = (gasto|float / limite|float * 100) if limite > 0 else 0 %}
         {% set pct_capped = [pct, 100]|min %}
         {% set ring_color = '#ef4444' if pct > 100 else ('#f59e0b' if pct > 80 else '#22c55e') %}
         {% set circumference = 113.1 %}
