@@ -185,7 +185,18 @@
                     <span>Metas</span>
                 </a>
             </nav>
-            <div class="px-3 py-3 border-t" style="border-color:var(--border);">
+            <div class="px-3 py-3 border-t space-y-3" style="border-color:var(--border);">
+                <div id="calendar-widget" data-mes="{{ mes|default(_current_period().mes, true) }}" data-ano="{{ ano|default(_current_period().ano, true) }}" class="rounded-xl p-3" style="background:var(--surface-2);">
+                    <div class="flex items-center justify-between mb-2">
+                        <button id="cal-prev" class="w-6 h-6 rounded flex items-center justify-center text-sm font-bold hover:opacity-70 transition" style="color:var(--text-secondary);" title="Mês anterior">&#8249;</button>
+                        <span id="cal-title" class="text-xs font-semibold" style="color:var(--text-primary);"></span>
+                        <button id="cal-next" class="w-6 h-6 rounded flex items-center justify-center text-sm font-bold hover:opacity-70 transition" style="color:var(--text-secondary);" title="Próximo mês">&#8250;</button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 mb-1 text-center text-[10px] font-semibold" style="color:var(--text-muted);">
+                        <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                    </div>
+                    <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+                </div>
                 <button onclick="toggleTheme()" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium w-full transition hover:opacity-80" style="color:var(--text-secondary);">
                     <i data-lucide="sun-moon" class="w-[18px] h-[18px]"></i>
                     <span id="theme-label">Dark mode</span>
@@ -271,8 +282,65 @@
             o.classList.toggle('hidden', open);
         }
 
+        function initCalendar() {
+            const cal = document.getElementById('calendar-widget');
+            if (!cal) return;
+            const today = new Date();
+            let viewMes = parseInt(cal.dataset.mes, 10);
+            let viewAno = parseInt(cal.dataset.ano, 10);
+            const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const title = document.getElementById('cal-title');
+            const grid = document.getElementById('cal-grid');
+            const monthAware = ['/', '/transacoes', '/metas'];
+
+            function render() {
+                title.textContent = monthNames[viewMes - 1] + ' ' + viewAno;
+                grid.innerHTML = '';
+                const first = new Date(viewAno, viewMes - 1, 1);
+                const startDay = (first.getDay() + 6) % 7;
+                const daysInMonth = new Date(viewAno, viewMes, 0).getDate();
+                const isTodayMonth = viewMes - 1 === today.getMonth() && viewAno === today.getFullYear();
+                for (let i = 0; i < startDay; i++) {
+                    const el = document.createElement('div');
+                    grid.appendChild(el);
+                }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const el = document.createElement('button');
+                    el.textContent = d;
+                    el.className = 'aspect-square rounded text-[10px] flex items-center justify-center transition';
+                    if (isTodayMonth && d === today.getDate()) {
+                        el.style.background = 'var(--accent)';
+                        el.style.color = '#000';
+                        el.style.fontWeight = '700';
+                    } else {
+                        el.style.color = 'var(--text-secondary)';
+                        el.className += ' hover:opacity-70';
+                    }
+                    el.addEventListener('click', () => goToMonth(viewMes, viewAno));
+                    grid.appendChild(el);
+                }
+            }
+
+            function goToMonth(m, a) {
+                const base = monthAware.includes(window.location.pathname) ? window.location.pathname : '/';
+                const params = new URLSearchParams(window.location.search);
+                params.set('mes', m);
+                params.set('ano', a);
+                window.location.href = base + '?' + params.toString();
+            }
+
+            document.getElementById('cal-prev').addEventListener('click', () => {
+                viewMes--; if (viewMes < 1) { viewMes = 12; viewAno--; } render();
+            });
+            document.getElementById('cal-next').addEventListener('click', () => {
+                viewMes++; if (viewMes > 12) { viewMes = 1; viewAno++; } render();
+            });
+            render();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             lucide.createIcons();
+            initCalendar();
             const path = window.location.pathname.replace(/\/$/, '') || '/';
             document.querySelectorAll('.sidebar-link').forEach(a => {
                 const page = a.getAttribute('data-page');

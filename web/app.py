@@ -14,6 +14,14 @@ USER_ID = int(os.getenv("ALLOWED_USER_IDS", "1401845586").split(",")[0].strip())
 templates = Jinja2Templates(directory="web/templates")
 
 
+def _current_period():
+    hoje = date.today()
+    return {"mes": hoje.month, "ano": hoje.year}
+
+
+templates.env.globals["_current_period"] = _current_period
+
+
 def _fetch(query, params=None):
     conn = get_conn()
     try:
