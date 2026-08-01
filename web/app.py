@@ -1,6 +1,7 @@
 import os
 from decimal import Decimal
 from datetime import date
+import psycopg2
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -382,12 +383,37 @@ async def categorias_page(request: Request):
 
 @app.post("/categorias/criar")
 async def criar_categoria(nome: str = Form(...), emoji: str = Form(default=None)):
-    _insert("INSERT INTO categorias (nome, emoji) VALUES (%s, %s)", (nome, emoji or None))
+    try:
+        _insert("INSERT INTO categorias (nome, emoji) VALUES (%s, %s)", (nome, emoji or None))
+    except psycopg2.errors.UniqueViolation:
+        return HTMLResponse("Já existe uma categoria com esse nome", status_code=400)
+    return RedirectResponse("/categorias", status_code=303)
+
+
+@app.get("/categorias/{cat_id}/editar", response_class=HTMLResponse)
+async def editar_categoria_form(request: Request, cat_id: int):
+    cat = _fetch_one("SELECT id, nome, emoji FROM categorias WHERE id=%s", (cat_id,))
+    if not cat:
+        return HTMLResponse("Categoria não encontrada", status_code=404)
+    return templates.TemplateResponse(request, "editar_categoria.html", {
+        "cat": {"id": cat[0], "nome": cat[1], "emoji": cat[2]},
+    })
+
+
+@app.post("/categorias/{cat_id}/editar")
+async def editar_categoria(cat_id: int, nome: str = Form(...), emoji: str = Form(default=None)):
+    try:
+        _execute("UPDATE categorias SET nome=%s, emoji=%s WHERE id=%s", (nome, emoji or None, cat_id))
+    except psycopg2.errors.UniqueViolation:
+        return HTMLResponse("Já existe uma categoria com esse nome", status_code=400)
     return RedirectResponse("/categorias", status_code=303)
 
 
 @app.post("/categorias/{cat_id}/deletar")
 async def deletar_categoria(cat_id: int):
+    total = _fetch_one("SELECT COUNT(*) FROM categorias", ())
+    if total and total[0] <= 1:
+        return HTMLResponse("Não é possível remover a última categoria", status_code=400)
     _execute("DELETE FROM categorias WHERE id=%s", (cat_id,))
     return RedirectResponse("/categorias", status_code=303)
 

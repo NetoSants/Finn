@@ -27,9 +27,16 @@
         </div>
         <div class="text-right shrink-0">
             <p class="text-sm font-semibold" style="color:var(--text-primary);">R$ {{ total_valor|fmt }}</p>
-            {% if total_registros == 0 %}
-            <form method="post" action="/categorias/{{ id }}/deletar" onsubmit="return confirm('Deletar esta categoria?')" class="opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                <button type="submit" class="text-xs" style="color:var(--danger);">Remover</button>
+        </div>
+        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <a href="/categorias/{{ id }}/editar" class="w-7 h-7 rounded-lg flex items-center justify-center transition" style="color:var(--text-muted);" title="Editar">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            </a>
+            {% if categorias|length > 1 %}
+            <form method="post" action="/categorias/{{ id }}/deletar" onsubmit="return confirm('Deletar esta categoria?')">
+                <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center transition" style="color:var(--danger);" title="Deletar">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
             </form>
             {% endif %}
         </div>
