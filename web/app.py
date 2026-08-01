@@ -23,13 +23,16 @@ def _current_period():
 templates.env.globals["_current_period"] = _current_period
 
 
-def _fechamento_mes_corrente(hoje, dia_fechamento):
-    """Data de fechamento da fatura no mes corrente (corte da fatura atual).
+def _fechamento_mes(ano, mes, dia_fechamento):
+    """Data de fechamento da fatura em um mes (ajustada ao limite do mes)."""
+    dia = min(dia_fechamento, calendar.monthrange(ano, mes)[1])
+    return date(ano, mes, dia)
 
-    Compras a partir desse dia entram na fatura do proximo mes.
-    """
-    dia = min(dia_fechamento, calendar.monthrange(hoje.year, hoje.month)[1])
-    return date(hoje.year, hoje.month, dia)
+
+def _mes_anterior(ano, mes):
+    if mes == 1:
+        return ano - 1, 12
+    return ano, mes - 1
 
 
 def _add_months(hoje, months):
@@ -103,7 +106,6 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     hoje = date.today()
     mes = mes or hoje.month
     ano = ano or hoje.year
-    ref_fatura = date(ano, mes, 1)
 
     total_gastos = _fetch_one(
         "SELECT COALESCE(SUM(valor),0) FROM transacoes WHERE tipo='gasto' AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
@@ -187,12 +189,14 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     )
     faturas = []
     for bid, nome, dia, limite in faturas_raw:
-        fim_ciclo = _fechamento_mes_corrente(ref_fatura, dia)
+        fim_ciclo = _fechamento_mes(ano, mes, dia)
+        ini_ciclo = _fechamento_mes(*_mes_anterior(ano, mes), dia)
         total = _fetch_one(
             """SELECT COALESCE(SUM(valor),0) FROM transacoes
                WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
-                   AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
-            (USER_ID, bid, fim_ciclo)
+                   AND banco_id=%s AND fatura_paga=false
+                   AND data_transacao >= %s AND data_transacao < %s""",
+            (USER_ID, bid, ini_ciclo, fim_ciclo)
         )[0]
         if total > 0:
             faturas.append((bid, nome, float(total), dia, float(limite) if limite else 0))
@@ -268,12 +272,15 @@ async def pagar_fatura(banco_id: int):
     banco = _fetch_one("SELECT nome, dia_fechamento FROM bancos WHERE id=%s", (banco_id,))
     if not banco:
         return HTMLResponse("Banco não encontrado", status_code=404)
-    fim_ciclo = _fechamento_mes_corrente(date.today(), banco[1])
+    hoje = date.today()
+    fim_ciclo = _fechamento_mes(hoje.year, hoje.month, banco[1])
+    ini_ciclo = _fechamento_mes(*_mes_anterior(hoje.year, hoje.month), banco[1])
     _execute(
         """UPDATE transacoes SET fatura_paga=true
            WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
-               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
-        (USER_ID, banco_id, fim_ciclo)
+               AND banco_id=%s AND fatura_paga=false
+               AND data_transacao >= %s AND data_transacao < %s""",
+        (USER_ID, banco_id, ini_ciclo, fim_ciclo)
     )
     return RedirectResponse("/", status_code=303)
 
@@ -287,12 +294,14 @@ async def parcelar_fatura(banco_id: int, meses: int = Form(...), acrescimo: floa
     acrescimo = max(0.0, min(acrescimo, 500.0))
 
     hoje = date.today()
-    fim_ciclo = _fechamento_mes_corrente(hoje, banco[1])
+    fim_ciclo = _fechamento_mes(hoje.year, hoje.month, banco[1])
+    ini_ciclo = _fechamento_mes(*_mes_anterior(hoje.year, hoje.month), banco[1])
     total = _fetch_one(
         """SELECT COALESCE(SUM(valor),0) FROM transacoes
            WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
-               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
-        (USER_ID, banco_id, fim_ciclo)
+               AND banco_id=%s AND fatura_paga=false
+               AND data_transacao >= %s AND data_transacao < %s""",
+        (USER_ID, banco_id, ini_ciclo, fim_ciclo)
     )[0]
     if total <= 0:
         return RedirectResponse("/", status_code=303)
@@ -300,8 +309,9 @@ async def parcelar_fatura(banco_id: int, meses: int = Form(...), acrescimo: floa
     _execute(
         """UPDATE transacoes SET fatura_paga=true
            WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
-               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
-        (USER_ID, banco_id, fim_ciclo)
+               AND banco_id=%s AND fatura_paga=false
+               AND data_transacao >= %s AND data_transacao < %s""",
+        (USER_ID, banco_id, ini_ciclo, fim_ciclo)
     )
 
     valor_total = float(total) * (1 + acrescimo / 100)
