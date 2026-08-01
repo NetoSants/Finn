@@ -202,6 +202,7 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
             faturas.append((bid, nome, float(total), dia, float(limite) if limite else 0))
 
     total_pendente = sum(f[2] for f in faturas)
+    fatura_aberta = (mes == hoje.month and ano == hoje.year)
 
     heatmap_raw = _fetch(
         """SELECT EXTRACT(DAY FROM data_transacao)::int, COALESCE(SUM(valor),0)
@@ -245,6 +246,7 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
         "ultimas": ultimas,
         "faturas": faturas,
         "total_pendente": total_pendente,
+        "fatura_aberta": fatura_aberta,
         "heatmap": heatmap,
         "mes": mes,
         "ano": ano,
