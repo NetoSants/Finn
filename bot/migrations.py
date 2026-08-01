@@ -90,6 +90,18 @@ MIGRATIONS = [
         END IF;
     END $$;
     """,
+    # Coluna fatura_paga nas transacoes (controle de pagamento de faturas)
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'transacoes' AND column_name = 'fatura_paga'
+        ) THEN
+            ALTER TABLE transacoes ADD COLUMN fatura_paga BOOLEAN DEFAULT FALSE;
+        END IF;
+    END $$;
+    """,
 ]
 
 

@@ -100,3 +100,6 @@ CREATE INDEX IF NOT EXISTS idx_fixos_user_id ON fixos(user_id);
 
 -- Referencia para geracao automatica de lancamentos a partir de fixos
 ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS fixo_origin_id INTEGER REFERENCES fixos(id) ON DELETE SET NULL;
+
+-- Controle de pagamento de faturas (credito)
+ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS fatura_paga BOOLEAN DEFAULT FALSE;

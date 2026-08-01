@@ -1,4 +1,5 @@
 import os
+import calendar
 from decimal import Decimal
 from datetime import date
 import psycopg2
@@ -20,6 +21,27 @@ def _current_period():
 
 
 templates.env.globals["_current_period"] = _current_period
+
+
+def _next_closing(hoje, dia_fechamento):
+    """Proxima data de fechamento da fatura de um banco a partir de hoje."""
+    if hoje.day < dia_fechamento:
+        mes, ano = hoje.month, hoje.year
+    elif hoje.month == 12:
+        mes, ano = 1, hoje.year + 1
+    else:
+        mes, ano = hoje.month + 1, hoje.year
+    dia = min(dia_fechamento, calendar.monthrange(ano, mes)[1])
+    return date(ano, mes, dia)
+
+
+def _add_months(hoje, months):
+    """Soma N meses a uma data, ajustando o dia ao limite do mes."""
+    total = hoje.month - 1 + months
+    ano = hoje.year + total // 12
+    mes = total % 12 + 1
+    dia = min(hoje.day, calendar.monthrange(ano, mes)[1])
+    return date(ano, mes, dia)
 
 
 def _fetch(query, params=None):
@@ -160,20 +182,24 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     }
 
     faturas_raw = _fetch(
-        """SELECT b.nome,
-                  COALESCE(SUM(t.valor),0) as total,
-                  b.dia_fechamento,
-                  b.limite
-           FROM transacoes t
-           JOIN bancos b ON b.id = t.banco_id
-           WHERE t.user_id = %s AND t.tipo = 'gasto' AND t.pagamento = 'credito'
-               AND t.banco_id IS NOT NULL
-           GROUP BY b.nome, b.dia_fechamento, b.limite
-           HAVING COALESCE(SUM(t.valor),0) > 0
+        """SELECT b.id, b.nome, b.dia_fechamento, b.limite
+           FROM bancos b
            ORDER BY b.nome""",
-        (USER_ID,)
+        ()
     )
-    faturas = [(nome, float(total), dia, float(limite) if limite else 0) for nome, total, dia, limite in faturas_raw]
+    faturas = []
+    for bid, nome, dia, limite in faturas_raw:
+        prox_fechamento = _next_closing(hoje, dia)
+        total = _fetch_one(
+            """SELECT COALESCE(SUM(valor),0) FROM transacoes
+               WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
+                   AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
+            (USER_ID, bid, prox_fechamento)
+        )[0]
+        if total > 0:
+            faturas.append((bid, nome, float(total), dia, float(limite) if limite else 0))
+
+    total_pendente = sum(f[2] for f in faturas)
 
     heatmap_raw = _fetch(
         """SELECT EXTRACT(DAY FROM data_transacao)::int, COALESCE(SUM(valor),0)
@@ -216,6 +242,7 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
         "metas": metas,
         "ultimas": ultimas,
         "faturas": faturas,
+        "total_pendente": total_pendente,
         "heatmap": heatmap,
         "mes": mes,
         "ano": ano,
@@ -236,6 +263,61 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
             (USER_ID,)
         )[0]),
     })
+
+
+@app.post("/faturas/{banco_id}/pagar")
+async def pagar_fatura(banco_id: int):
+    banco = _fetch_one("SELECT nome, dia_fechamento FROM bancos WHERE id=%s", (banco_id,))
+    if not banco:
+        return HTMLResponse("Banco não encontrado", status_code=404)
+    prox_fechamento = _next_closing(date.today(), banco[1])
+    _execute(
+        """UPDATE transacoes SET fatura_paga=true
+           WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
+               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
+        (USER_ID, banco_id, prox_fechamento)
+    )
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/faturas/{banco_id}/parcelar")
+async def parcelar_fatura(banco_id: int, meses: int = Form(...), acrescimo: float = Form(default=0)):
+    banco = _fetch_one("SELECT nome, dia_fechamento FROM bancos WHERE id=%s", (banco_id,))
+    if not banco:
+        return HTMLResponse("Banco não encontrado", status_code=404)
+    meses = max(2, min(meses, 24))
+    acrescimo = max(0.0, min(acrescimo, 500.0))
+
+    hoje = date.today()
+    prox_fechamento = _next_closing(hoje, banco[1])
+    total = _fetch_one(
+        """SELECT COALESCE(SUM(valor),0) FROM transacoes
+           WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
+               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
+        (USER_ID, banco_id, prox_fechamento)
+    )[0]
+    if total <= 0:
+        return RedirectResponse("/", status_code=303)
+
+    _execute(
+        """UPDATE transacoes SET fatura_paga=true
+           WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
+               AND banco_id=%s AND fatura_paga=false AND data_transacao < %s""",
+        (USER_ID, banco_id, prox_fechamento)
+    )
+
+    valor_total = float(total) * (1 + acrescimo / 100)
+    valor_mensal = round(valor_total / meses, 2)
+    dia_base = min(banco[1], calendar.monthrange(hoje.year, hoje.month)[1])
+    base = date(hoje.year, hoje.month, dia_base)
+    for i in range(1, meses + 1):
+        data_parcela = _add_months(base, i)
+        _insert(
+            """INSERT INTO transacoes (tipo, valor, descricao, pagamento, user_id, parcelas, data_transacao)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            ("gasto", valor_mensal, f"Parcela {i}/{meses} da fatura {banco[0]}", "debito", USER_ID, meses, data_parcela)
+        )
+    return RedirectResponse("/", status_code=303)
 
 
 @app.get("/transacoes", response_class=HTMLResponse)
