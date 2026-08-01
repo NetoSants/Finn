@@ -103,6 +103,7 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     hoje = date.today()
     mes = mes or hoje.month
     ano = ano or hoje.year
+    ref_fatura = date(ano, mes, 1)
 
     total_gastos = _fetch_one(
         "SELECT COALESCE(SUM(valor),0) FROM transacoes WHERE tipo='gasto' AND user_id=%s AND EXTRACT(MONTH FROM data_transacao)=%s AND EXTRACT(YEAR FROM data_transacao)=%s",
@@ -186,7 +187,7 @@ async def dashboard(request: Request, mes: int = Query(default=None), ano: int =
     )
     faturas = []
     for bid, nome, dia, limite in faturas_raw:
-        fim_ciclo = _fechamento_mes_corrente(hoje, dia)
+        fim_ciclo = _fechamento_mes_corrente(ref_fatura, dia)
         total = _fetch_one(
             """SELECT COALESCE(SUM(valor),0) FROM transacoes
                WHERE user_id=%s AND tipo='gasto' AND pagamento='credito'
