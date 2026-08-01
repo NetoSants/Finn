@@ -6,6 +6,7 @@ services:
       POSTGRES_USER: finn
       POSTGRES_PASSWORD: finn
       POSTGRES_DB: finn
+      TZ: "America/Sao_Paulo"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
